@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+    alert("로그아웃 되었습니다.");
+    window.location.href = "{{ url_for('main.index') }}";
+</script>
+{% endblock %}

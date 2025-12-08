@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Chart Graph</title>
+    <style>
+        #chartContainer {
+            width: 100%;
+            /* or any other percentage or pixel value */
+            height: auto;
+            /* or any other pixel value */
+            margin: 0 auto;
+            /* center the container */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chartContainer">
+        <canvas id="myChart"></canvas>
+    </div>
+    <script>
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Label 1', 'Label 2', 'Label 3'], // X축 레이블
+                datasets: [{
+                    label: '은평구',
+                    data: [10, 20, 30], // 첫 번째 라인의 데이터
+                    borderColor: 'blue', // 첫 번째 라인의 색상
+                    borderWidth: 1
+                }, {
+                    label: '서대문구',
+                    data: [20, 30, 45], // 두 번째 라인의 데이터
+                    borderColor: 'red', // 두 번째 라인의 색상
+                    borderWidth: 1
+                }, {
+                    label: '마포구',
+                    data: [15, 25, 35], // 두 번째 라인의 데이터
+                    borderColor: 'black', // 두 번째 라인의 색상
+                    borderWidth: 1
+                },
+                ]
+            },
+            options: {}
+        });
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap-icons.css') }}">
+
+    <title>tAIke</title>
+</head>
+
+<body class="d-flex flex-column min-vh-100 {% block body_class %}{% endblock %}">
+
+{% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            {% if category == 'logout' %}
+                <div class="alert alert-success text-center mb-0" role="alert">
+                    {{ message }}
+                </div>
+            {% else %}
+                <div class="alert alert-danger text-center mb-0" role="alert">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- 헤더 -->
+<header class="site-header">
+    <div class="container d-flex justify-content-between align-items-center">
+
+        <!-- 로고 -->
+        <div class="brand d-flex align-items-center">
+            <a href="/" class="d-flex align-items-center">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" height="80" class="mr-2">
+            </a>
+        </div>
+
+        <!-- 상단 메뉴 -->
+        {% if not auth_page %}
+        <nav class="top-menu d-flex align-items-center">
+            <a href="{{ url_for('main.predict') }}" class="top-menu-link">머신러닝</a>
+            <a href="{{ url_for('main.dashboard') }}" class="top-menu-link">통계 대시보드</a>
+            <a href="{{ url_for('main.qna') }}" class="top-menu-link">Q&amp;A</a>
+
+            <div class="top-menu-auth d-flex align-items-center">
+                {% if g.user %}
+                    <!-- 우선 기본 이모티콘으로.. 다음에 로그인 이모티콘 바꾸기 -->
+                    <i class="bi bi-person-fill auth-icon"></i>
+                    <span class="auth-username me-2">
+                        {{ g.user.username }}
+                    </span>
+                    <a href="{{ url_for('auth.logout') }}" class="auth-link">로그아웃</a>
+                {% else %}
+                    <i class="bi bi-person auth-icon"></i>
+                    <a href="{{ url_for('auth.login') }}" class="auth-link">로그인</a>
+                    <span class="auth-separator">/</span>
+                    <a href="{{ url_for('auth.signup') }}" class="auth-link">회원가입</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- 햄버거 버튼 -->
+        <button class="nav-toggle" type="button" id="nav-toggle" aria-label="메뉴 열기">
+            <i class="bi bi-list"></i>
+        </button>
+        {% endif %}
+    </div>
+</header>
+
+<!-- ===== 페이지별 내용 ===== -->
+<main class="flex-fill">
+    <div class="container-fluid p-0">
+        {% block content %}
+        {% endblock %}
+    </div>
+</main>
+
+<!-- 푸터 -->
+<footer class="site-footer py-3">
+    <div class="container text-center small">
+        <div class="mb-1">
+            <span class="mx-2">·</span>
+            <span>© 2025 김진혁, 김세준 tAIke · 서울 종로3가</span>
+            <a href="{{ url_for('main.terms') }}" class="text-decoration-none mx-2">이용약관</a>
+            |
+            <a href="{{ url_for('main.privacy') }}" class="text-decoration-none mx-2">개인정보처리방침</a>
+        </div>
+    </div>
+</footer>
+
+<!-- 기본 템플릿에 삽입할 내용 -->
+<script src="{{ url_for('static', filename='jquery-3.7.1.min.js') }}"></script>
+<script src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% block script %}
+{% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const root = document.documentElement;  // <html>
+
+    /* 홈 섹션 스크롤 스냅 처리 (한 번만 정의) */
+    function toggleSnap() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const docHeight = document.documentElement.scrollHeight;
+        const winHeight = window.innerHeight;
+
+        // 화면 맨 아래까지 남은 거리
+        const distanceFromBottom = docHeight - (scrollTop + winHeight);
+
+        // 홈 화면이 아니면 스냅 끔
+        if (!document.body.classList.contains('home-page')) {
+            root.classList.remove('no-snap');
+            return;
+        }
+
+        // 바닥에서 200px 이내면 스냅 끄기 → 푸터 안 튀어오르게
+        if (distanceFromBottom < 200) {
+            root.classList.add('no-snap');
+        } else {
+            root.classList.remove('no-snap');
+        }
+    }
+
+    // 홈일 때만 스크롤 이벤트 연결
+    if (document.body.classList.contains('home-page')) {
+        window.addEventListener('scroll', toggleSnap);
+        toggleSnap(); // 처음 로딩 시 한 번 체크
+    }
+
+    /* 햄버거 토글 처리 (PC + 모바일 모두) */
+    const navToggle = document.getElementById('nav-toggle');
+    const topMenu = document.querySelector('.top-menu');
+
+    if (navToggle && topMenu) {
+        navToggle.addEventListener('click', function () {
+            const width = window.innerWidth || document.documentElement.clientWidth;
+
+            if (width < 992) {
+                // 모바일: open 클래스로 열고 닫기
+                topMenu.classList.toggle('open');
+            } else {
+                // PC: is-hidden 클래스로 열고 닫기
+                topMenu.classList.toggle('is-hidden');
+            }
+        });
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block body_class %}hero-page{% endblock %}
+
+{% block content %}
+
+<section class="hero-section hero-introduce">
+    <div class="hero-overlay"></div>
+    <div class="container hero-inner">
+        <h1 class="hero-title">소개</h1>
+    </div>
+</section>
+
+<section class="introduce-body">
+    <div class="container">
+        <div class="intro-layout">
+
+            <!-- 왼쪽: 메인 설명 -->
+            <div class="intro-main">
+                <h2 class="intro-main-title">
+                    Agentic AI를 활용한 <br>
+                    지역아동센터 수요 예측 서비스
+                </h2>
+
+                <p class="intro-main-sub">
+                    <span class="intro-highlight">tAIke</span>는 지역아동센터 이용 아동 수를
+                    데이터로 분석·예측하는 AI 서비스입니다.
+                </p>
+
+                <p>
+                    통계 데이터를 바탕으로 지역아동센터
+                    <span class="intro-highlight">이용 증감 추세</span>를 분석하고,<br>
+                    머신러닝 모델(XGBoost)을 활용해
+                    <span class="intro-highlight">향후 이용자 수 변화를 예측</span>합니다.
+                </p>
+
+                <p>
+                    이를 통해 자치구별로 어느 지역에 더 많은 돌봄 자원이 필요한지,<br>
+                    정책과 지원이 어디로 향해야 하는지에 대한 기초 자료를 제공합니다.
+                </p>
+
+                <hr class="my-4">
+
+                <p>
+                    이 서비스는 다음과 같은 질문에 답하고자 합니다.
+                </p>
+                <p>
+                    • 어느 지역에서 지역아동센터 이용 수요가 늘어나고 있는가?<br>
+                    • 향후 몇 년간 어떤 지역에 더 많은 지원이 필요할까?
+                </p>
+
+                <p class="mt-3">
+                    데이터에 근거한 의사결정을 돕고,<br>
+                    아이들이 <span class="intro-highlight">안전하고 더 나은 환경</span>에서 자랄 수 있도록
+                    <span class="intro-highlight">tAIke</span>가 함께 고민하겠습니다.
+                </p>
+            </div>
+
+            <!-- 오른쪽: 한눈에 보는 요약 카드 -->
+            <aside class="intro-side">
+                <h3 class="intro-side-title">이 서비스로 할 수 있는 일</h3>
+                <ul class="intro-checklist">
+                    <li><span class="intro-check-icon"></span>자치구별 지역아동센터 이용자 수 추세 확인</li>
+                    <li><span class="intro-check-icon"></span>2015~2022년 실제 통계 기반 분석</li>
+                    <li><span class="intro-check-icon"></span>2023~2030년까지의 이용자 수 예측</li>
+                    <li><span class="intro-check-icon"></span>수요가 높은 지역·지원이 더 필요한 지역 탐색</li>
+                </ul>
+
+                <h3 class="intro-side-title mt-4">데이터 & 모델 한눈에 보기</h3>
+                <ul class="intro-checklist">
+                    <li><span class="intro-check-icon"></span>서울시 자치구별 통계(2015~2022년)</li>
+                    <li>
+                        <span class="intro-check-icon"></span>
+                        한부모가구 · 기초생활수급자 · 다문화가구 ·<br>
+                        학원 수 · GRDP 등 주요 지표 활용
+                    </li>
+                    <li><span class="intro-check-icon"></span>XGBoost 회귀 모델</li>
+                    <li><span class="intro-check-icon"></span>2023 ~ 2030 지원센터 이용자 수요 예측</li>
+                    <li><span class="intro-check-icon"></span>모델 설명력 : 84.4%</li>
+                </ul>
+            </aside>
+
+        </div>
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,82 @@
+{# templates/question/question_detail.html #}
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="hero-section hero-qna">
+  <div class="hero-overlay"></div>
+  <div class="container hero-inner">
+    <h1 class="hero-title">Q&A</h1>
+  </div>
+</section>
+
+
+<div class="container my-3">
+
+    <h2 class="border-bottom py-2">{{ question.subject }}</h2>
+
+    <div class="card my-3">
+        <div class="card-body">
+            <div class="card-text" style="white-space: pre-line;">
+                {{ question.content }}
+            </div>
+            <div class="text-end mt-2">
+                <div class="badge bg-light text-dark p-2">
+                    {{ question.create_date }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3 text-end">
+    {% if g.user and (g.user.id == question.user_id or g.user.is_admin) %}
+        <a href="{{ url_for('question.modify', question_id=question.id) }}"
+           class="btn btn-sm btn-outline-secondary">수정</a>
+        <a href="{{ url_for('question.delete', question_id=question.id) }}"
+           class="btn btn-sm btn-outline-danger"
+           onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+    {% endif %}
+    </div>
+
+    <h5 class="border-bottom my-3 py-2">
+        {{ question.answer_set|length }} 개의 답변이 있습니다.
+    </h5>
+
+    {% for answer in question.answer_set %}
+    <div class="card my-3">
+        <div class="card-body">
+            <div class="card-text" style="white-space: pre-line;">
+                {{ answer.content }}
+            </div>
+            <div class="text-end mt-2">
+                <div class="badge bg-light text-dark p-2">
+                    {% if question.user %}
+                        {{ question.user.username }} |
+                    {% else %}
+                        익명 |
+                    {% endif %}
+                    {{ question.create_date }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <form action="{{ url_for('answer.create', question_id=question.id) }}"
+          method="post" class="my-3">
+        {{ form.csrf_token }}
+        {% for field, errors in form.errors.items() %}
+        <div class="alert alert-danger" role="alert">
+            <strong>{{ form[field].label }}</strong>: {{ ','.join(errors) }}
+        </div>
+        {% endfor %}
+
+        <div class="form-group">
+            <textarea name="content" id="content"
+                      class="form-control" rows="10"></textarea>
+        </div>
+        <input type="submit" value="답변등록" class="btn btn-primary mt-2">
+    </form>
+
+</div>
+{% endblock %}
