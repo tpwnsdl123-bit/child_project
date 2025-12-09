@@ -56,7 +56,7 @@ def create():
 def delete(question_id):
     question = Question.query.get_or_404(question_id)
 
-    # ★ 권한 체크
+    # 권한 체크
     if question.user_id != g.user.id and not g.user.is_admin:
         flash('삭제 권한이 없습니다.')
         return redirect(url_for('question.detail', question_id=question_id))
