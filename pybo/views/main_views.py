@@ -1,8 +1,5 @@
-from ..forms import UserLoginForm
 from flask import Blueprint, url_for, render_template
 from werkzeug.utils import redirect
-from pybo.models import Question
-from .auth_views import login_required
 
 bp = Blueprint('main', __name__, url_prefix='/')
 
