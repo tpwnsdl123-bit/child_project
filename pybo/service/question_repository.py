@@ -25,10 +25,22 @@ class QuestionRepository:
         db.session.commit()
         return question
 
-    def update_question(self, question: Question, content: str): # 답변 생성
+    def update_question(self, question: Question, subject: str, content: str) -> Question: # 질문 수정
+        question.subject = subject
+        question.content = content
+        if hasattr(question, "modify_date"):
+            question.modify_date = datetime.now()
+        db.session.commit()
+        return question
+
+    def delete_question(self, question: Question) -> None: # 질문 삭제
+        db.session.delete(question)
+        db.session.commit()
+
+    def create_answer(self, question: Question, content: str, user) -> Answer: # 답변 생성
         answer = Answer(
-            content= content,
-            create_date= datetime.now(),
+            content=content,
+            create_date=datetime.now(),
         )
         question.answer_set.append(answer)
         db.session.commit()

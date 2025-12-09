@@ -2,6 +2,7 @@
 from flask import Blueprint, url_for, request, render_template
 from werkzeug.utils import redirect
 
+from .auth_views import login_required
 from ..forms import AnswerForm
 from pybo.service.qna_service import QnaService
 
@@ -11,6 +12,7 @@ qna_service = QnaService()
 
 
 @bp.route('/create/<int:question_id>', methods=('GET', 'POST'))
+@login_required
 def create(question_id):
     form = AnswerForm()
     question = qna_service.get_question_detail(question_id)
