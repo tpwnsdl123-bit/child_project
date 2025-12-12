@@ -23,6 +23,14 @@
     background: rgba(255, 255, 255, 0.12);
 }
 
+/* 히어로 서브타이틀 */
+.hero-genai .hero-subtitle,
+.hero-genai-subtitle {
+    max-width: 620px;
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+}
+
 .genai-title {
     font-size: 2rem;
     font-weight: 700;

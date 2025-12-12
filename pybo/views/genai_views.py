@@ -11,11 +11,20 @@ def generate_report(): # 보고서 생성
     data = request.get_json() or {}
     prompt = (data.get("prompt") or "").strip()
 
+    district = (data.get("district") or "").strip() or None
+    start_year = data.get("start_year")
+    end_year = data.get("end_year")
+
     if not prompt:
         return jsonify({"success": False, "error": "요청 내용을 입력해 주세요."}), 400
 
     try:
-        result_text = genai_service.generate_report(prompt)
+        result_text = genai_service.generate_report_with_data(
+            prompt,
+            district=district,
+            start_year=start_year,
+            end_year=end_year,
+        )
         return jsonify({"success": True, "result": result_text})
     except Exception as e:
         print("generate_report error:", e, flush=True)
@@ -25,30 +34,54 @@ def generate_report(): # 보고서 생성
         )
 
 @bp.route("/policy", methods=["POST"])
-def generate_policy(): # 정책 아이디어
+def generate_policy():  # 정책 아이디어
     data = request.get_json() or {}
     prompt = (data.get("prompt") or "").strip()
+
+    # 선택적으로 자치구 / 연도 받기 (UI에서 안 보내면 전부 None)
+    district = (data.get("district") or "").strip() or None
+    start_year = data.get("start_year")
+    end_year = data.get("end_year")
 
     if not prompt:
         return jsonify({"success": False, "error": "prompt is required"}), 400
 
-    text = genai_service.generate_policy(prompt)
-    return jsonify({"success": True, "result": text})
+    try:
+        text = genai_service.generate_policy(
+            prompt,
+            district=district,
+            start_year=start_year,
+            end_year=end_year,
+        )
+        return jsonify({"success": True, "result": text})
+    except Exception:
+        current_app.logger.exception("genai policy error")
+        return jsonify({"success": False, "error": "정책 아이디어 생성 중 오류가 발생했습니다."}), 500
 
 @bp.route("/explain", methods=["POST"])
-def explain(): # 지표 설명
+def explain():  # 지표 설명
     data = request.get_json() or {}
     prompt = (data.get("prompt") or "").strip()
+
+    district = (data.get("district") or "").strip() or None
+    start_year = data.get("start_year")
+    end_year = data.get("end_year")
 
     if not prompt:
         return jsonify({"success": False, "error": "지표나 질문을 입력해 주세요."}), 400
 
     try:
-        text = genai_service.explain_indicator(prompt)
+        text = genai_service.explain_indicator(
+            prompt,
+            district=district,
+            start_year=start_year,
+            end_year=end_year,
+        )
         return jsonify({"success": True, "result": text})
     except Exception as e:
         current_app.logger.exception("genai explain error")
         return jsonify({"success": False, "error": "지표 설명 생성 중 오류가 발생했습니다."}), 500
+
 
 @bp.route("/ner", methods=["POST"])
 def ner(): # NER 분석
@@ -66,11 +99,15 @@ def ner(): # NER 분석
         return jsonify({"success": False, "error": "NER 분석 중 오류가 발생했습니다."}), 500
 
 @bp.route("/qa", methods=["POST"])
-def qa(): # Q&A
+def qa():  # Q&A
     data = request.get_json() or {}
 
     question = (data.get("question") or "").strip()
     page = (data.get("page") or "").strip() or None
+
+    district = (data.get("district") or "").strip() or None
+    start_year = data.get("start_year")
+    end_year = data.get("end_year")
 
     if not question:
         return jsonify({"success": False, "error": "질문을 입력해주세요."}), 400
@@ -84,6 +121,9 @@ def qa(): # Q&A
             question=question,
             user_id=user_id,
             page=page,
+            district=district,
+            start_year=start_year,
+            end_year=end_year,
         )
         return jsonify({"success": True, "result": answer})
     except Exception:

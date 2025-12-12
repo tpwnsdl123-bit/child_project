@@ -1,7 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    // ----------------------------
-    // 1) 보고서 생성 탭
-    // ----------------------------
+    // 보고서 생성 탭
     const reportInput = document.getElementById("report-input");
     const reportBtn = document.getElementById("report-generate-btn");
     const reportResultBox = document.getElementById("report-result");
@@ -49,9 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ----------------------------
-    // 2) 정책 아이디어 탭
-    // ----------------------------
+    // 정책 아이디어 탭
     const policyInput = document.getElementById("policy-input");
     const policyBtn = document.getElementById("policy-generate-btn");
     const policyResultBox = document.getElementById("policy-result");
@@ -100,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
-// ==== 3) 지표 설명 생성 ====
+// 지표 설명 생성
 const explainInput = document.getElementById("explain-input");
 const explainBtn = document.getElementById("explain-generate-btn");
 const explainResult = document.getElementById("explain-result");
@@ -138,7 +134,7 @@ if (explainBtn && explainInput && explainResult) {
     });
 }
 
-// ==== 4) NER 분석 ====
+// NER 분석
 const nerInput = document.getElementById("ner-input");
 const nerBtn = document.getElementById("ner-generate-btn");
 const nerResult = document.getElementById("ner-result");
@@ -193,7 +189,7 @@ if (nerInput && nerBtn && nerResult) {
     });
 }
 
-// ==== 5) AI Q&A ====
+// AI Q&A
 const qaInput = document.getElementById("qa-input");
 const qaBtn = document.getElementById("qa-generate-btn");
 const qaResult = document.getElementById("qa-result");

@@ -469,7 +469,27 @@ body.home-page .section-full {
     background-image: url("/static/images/section2_2.jpg");
 }
 
-/* 4섹션: Q&A (홈) */
+/* 4 섹션 생성형 AI 섹션 (홈) */
+.section-genai {
+    min-height: 100vh;
+    padding: 80px 0 120px;
+    background: #020617;
+    display: flex;
+    align-items: center;
+}
+
+.section-genai .container {
+    max-width: 1200px;
+}
+
+.genai-home-card {
+    background-image: url("/static/images/genai-hero.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 5섹션: Q&A (홈) */
 
 .section-qna {
     min-height: 100vh;

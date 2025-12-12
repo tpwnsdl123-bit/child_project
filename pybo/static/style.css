@@ -347,6 +347,10 @@ body.hero-page .top-menu-auth {
     background: url("/static/images/terms-hero.webp") center/cover no-repeat !important;
 }
 
+.hero-section.hero-genai {
+    background: url("/static/images/genai-hero.jpg") center/cover no-repeat !important;
+}
+
 /* 모바일 전용 조정 (홈 섹션 높이 등)*/
 
 @media (max-width: 767.98px) {
