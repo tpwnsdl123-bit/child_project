@@ -1,226 +1,233 @@
+body {
+    background-color: #f8fafc !important; /* 전체 배경 흰색 */
+}
+
 .genai-wrapper {
-    max-width: 1100px;
+    max-width: 1400px;
     margin: 0 auto;
+    padding: 20px;
 }
 
-.genai-header::after {
-    content: "";
-    position: absolute;
-    right: -60px;
-    bottom: -60px;
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
+/* 좌측 사이드바 스타일 (길이 축소) */
+.genai-sidebar {
+    background: #1a233a; /* 짙은 남색 유지 */
+    border-radius: 16px;
+    padding: 25px 20px; /* 상하 패딩 약간 조정 */
+    height: fit-content; /* 내용물만큼만 높이 차지 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.hero-genai .hero-subtitle,
-.hero-genai-subtitle {
-    max-width: 620px;
-    font-size: 0.95rem;
-    margin-top: 0.5rem;
-}
-
-.genai-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-}
-
-/* 탭 카드 스타일 */
-.genai-card {
-    margin-top: 1.8rem;
-    border-radius: 1rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
-    background: #fff;
-}
-
-.genai-card .nav-tabs {
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.genai-card .nav-link {
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: #6b7280;
-    font-weight: 500;
-    padding: 1rem 1.2rem;
+.sidebar-nav .nav-link {
+    color: #a0aec0 !important; /* 기본 글자색 (연한 회색) */
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 1.05rem;
+    transition: all 0.2s ease-in-out;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.95rem;
-    transition: all 0.2s;
 }
 
-.genai-card .nav-link:hover {
-    color: #0b1f4b;
+.sidebar-nav .nav-link i {
+    margin-right: 14px;
+    font-size: 1.25rem;
 }
 
-.genai-card .nav-link.active {
-    color: #0b1f4b;
-    border-bottom-color: #3fd5c6;
-    background-color: transparent;
-    font-weight: 700;
+.sidebar-nav .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff !important;
 }
 
-/* 탭 내부 콘텐츠 공통 */
-.genai-tab-pane-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: #111827;
+.sidebar-nav .nav-link.active {
+    background: #3182ce !important; /* 활성화된 메뉴 파란색 */
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
 }
 
-.genai-tab-desc {
-    font-size: 0.95rem;
-    color: #6b7280;
-    margin-bottom: 1.5rem;
+.nav-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 20px 0;
 }
 
-.genai-form-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.3rem;
+.nav-config-btn {
+    color: #cbd5e0 !important;
 }
 
-.genai-textarea, .form-control {
-    font-size: 0.95rem;
-    border-radius: 0.5rem;
+/* 우측 메인 카드 스타일 (연한 회색/아이보리 톤으로 변경) */
+.genai-main-card {
+    border-radius: 16px;
+    border: 1px solid #e9ecef; /* 배경과 구분되는 아주 연한 테두리 */
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    background: #f8f9fa; /* 아주 연한 회색 (아이보리/그레이 톤) */
+    color: #2d3748; /* 기본 글자색 어둡게 변경 */
+    height: 100%; /* 우측 카드는 높이 유지 (보기 좋음) */
 }
 
-.genai-btn-main, .btn-primary {
-    border-radius: 0.5rem;
-    font-weight: 600;
-}
-
-/* AI 보고서 결과 화면 스타일 (JSON 파싱용) */
-
-/* 결과 카드 컨테이너 */
-.genai-result-card, #resultSection {
-    margin-top: 1.5rem;
-    border-radius: 0.75rem;
-    border: 1px solid #e5e7eb;
-    background-color: #ffffff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-}
-
-/* 보고서 제목 */
-.ai-report-title {
-    color: #1a202c;
-    font-size: 1.4rem;
+.pane-header h3 {
     font-weight: 800;
-    padding-bottom: 1rem;
-    margin-bottom: 1.2rem;
-    border-bottom: 2px solid #3fd5c6; /* 포인트 컬러 */
+    color: #2d3748; /* 제목 어두운색 */
+    letter-spacing: -0.5px;
 }
 
-/* 요약 박스 */
-.ai-summary-box {
-    background-color: #f0f9ff;
-    border-left: 5px solid #007bff;
-    padding: 1.2rem;
-    border-radius: 6px;
-    margin-bottom: 1.5rem;
-    color: #2c5282;
-    font-size: 0.95rem;
-    line-height: 1.6;
+.text-light-gray {
+    color: #718096 !important; /* 설명 글자색 약간 흐린 어두운색 */
 }
 
-/* 본문 텍스트 */
-.ai-content-text {
-    color: #374151;
-    line-height: 1.8;
-    font-size: 1.05rem;
-    white-space: pre-wrap; /* 줄바꿈 유지 */
-    text-align: justify;
+.border-bottom {
+    border-bottom: 1px solid #e9ecef !important; /* 구분선 연한 회색 */
 }
 
-/* 로딩 스피너 */
-#loadingSpinner {
-    text-align: center;
-    padding: 3rem 0;
-    color: #6b7280;
-}
-
-/* AI 모델 설정 탭 (Config) 스타일 */
-
-/* 설정 카드 컨테이너 */
-.config-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem; /* 기존 genai-card와 통일 */
-    padding: 1.5rem;
-    height: 100%; /* 카드 높이 균일하게 맞춤 */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.config-card:hover {
-    transform: translateY(-2px); /* 살짝 떠오르는 효과 */
-    box-shadow: 0 6px 12px rgba(0,0,0,0.06);
-}
-
-/* 카드 내부 섹션 제목 (예: 1. 학습 전략) */
-.config-section-title {
-    font-size: 1.05rem;
+/* 폼 요소 스타일 */
+.genai-form-label {
     font-weight: 700;
-    color: #374151;
-    margin-bottom: 1rem;
-    padding-left: 0.8rem;
-    border-left: 4px solid #3fd5c6; /* genai 포인트 컬러와 맞춤 */
-}
-
-/* 입력 라벨 (변수명) */
-.config-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 0.2rem;
+    color: #4a5568; /* 라벨 어두운색 */
+    margin-bottom: 10px;
     display: block;
 }
 
-/* 설명 텍스트 (작은 회색 글씨) */
-.config-desc {
-    font-size: 0.8rem;
-    color: #9ca3af;
-    margin-top: 0.3rem;
-    line-height: 1.4;
-    word-break: keep-all; /* 단어 단위 줄바꿈 */
+.ant-input {
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 12px 16px;
+    font-size: 1rem;
+    color: #2d3748 !important;
+    transition: all 0.2s;
+    background-color: #ffffff !important; /* 입력창 흰색 */
 }
 
-/* 강조 텍스트 (권장 범위 등) */
-.highlight-text {
-    color: #007bff;
+.ant-input:focus {
+    border-color: #3182ce !important;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15) !important;
+    outline: none;
+}
+
+/* 버튼 스타일 (그라데이션 효과 유지) */
+.btn-ant-primary {
+    background: linear-gradient(135deg, #3182ce, #63b3ed) !important;
+    border: none !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    padding: 12px 30px;
+    box-shadow: 0 4px 15px rgba(49, 130, 206, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-ant-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(49, 130, 206, 0.4);
+}
+
+/* 결과 표시 박스 */
+.genai-result-placeholder {
+    background: #edf2f7;
+    border: 2px dashed #cbd5e0;
+    border-radius: 12px;
+    color: #718096;
     font-weight: 600;
 }
 
-/* 폼 그룹 간격 조정 */
-.config-card .form-group {
-    margin-bottom: 1.2rem;
+.result-text-box {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    line-height: 1.8;
+    color: #4a5568 !important;
 }
 
-.config-card .form-group:last-child {
-    margin-bottom: 0;
+.ai-report-title {
+    font-weight: 800;
+    color: #2d3748;
+    border-left: 5px solid #3182ce;
+    padding-left: 15px;
 }
 
-/* 선택(Select) 박스 스타일 미세 조정 */
-.config-card .form-control {
-    font-size: 0.9rem;
-    padding: 0.4rem 0.7rem;
-    height: auto;
+.ai-summary-box {
+    background: #ebf8ff;
+    border-left: 4px solid #3182ce;
+    padding: 20px;
+    border-radius: 8px;
+    color: #2c5282;
 }
 
-/* 반응형 */
-@media (max-width: 768px) {
-    .genai-header {
-        padding: 1.8rem 1.4rem;
-    }
-    .genai-title {
-        font-size: 1.6rem;
-    }
-    .ai-report-title {
-        font-size: 1.2rem;
-    }
+.summary-tag {
+    display: inline-block;
+    background: #3182ce;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
+
+/* 채팅창 스타일 */
+.qa-chat-window {
+    background: #edf2f7; /* 채팅창 배경 약간 어둡게 */
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    height: 450px;
+    overflow-y: auto;
+}
+
+.chat-bubble {
+    max-width: 85%;
+    padding: 12px 18px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    line-height: 1.6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.ai-bubble {
+    background: #ffffff !important;
+    color: #2d3748 !important;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.user-bubble {
+    background: linear-gradient(135deg, #3182ce, #63b3ed) !important;
+    color: #ffffff !important;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-input {
+    border-radius: 25px !important;
+    padding-left: 20px !important;
+}
+
+/* 모달 및 설정창 스타일 (전부 화이트 테마 유지) */
+.config-modal-content {
+    background-color: #ffffff !important;
+    color: #2d3748 !important;
+    border-radius: 16px;
+    border: none;
+}
+
+.config-modal-content .form-control {
+    background-color: #ffffff !important;
+    color: #2d3748 !important;
+    border: 1px solid #ced4da !important;
+}
+
+.config-group-box {
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+}
+
+.config-sub-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.config-label { font-weight: 600; color: #4a5568; }
+.config-desc { color: #718096; }
+.highlight { color: #3182ce; font-weight: 700; }
+.admin-badge { background: #e53e3e; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; }

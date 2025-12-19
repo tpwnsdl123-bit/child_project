@@ -42,7 +42,7 @@ class GenAIService:
     # 서버 메모리에 저장되는 기본 하이퍼파라미터
     settings = {
         "temperature": 0.35,
-        "max_tokens": 600,  # JSON 잘림 방지용 여유분
+        "max_tokens": 600,
         "system_prompt_report": (
             "너는 서울시 아동 돌봄 정책 전문 데이터 분석가야. "
             "주어진 [데이터 요약]을 바탕으로 정책 담당자용 보고서를 작성해.\n"
@@ -56,18 +56,14 @@ class GenAIService:
     }
 
     def __init__(self) -> None:
-        # API URL 로드
         self.api_url = os.getenv("RUNPOD_API_URL")
         self.timeout = 180
-
-        # RAG 서비스 인스턴스 생성
         self.rag_service = RagService()
 
         if not self.api_url:
             print("경고: .env 파일에서 RUNPOD_API_URL을 찾을 수 없습니다.")
 
-        # NER 모델 로딩 (UI에 적용안함)
-        print("NER(개체명 인식) 모델을 로딩 중입니다...")
+        print("NER 모델을 로딩 중입니다...")
         try:
             self.ner_pipeline = pipeline("ner", model="Leo97/KoELECTRA-small-v3-modu-ner")
             print("NER 모델 로딩 완료!")
@@ -75,20 +71,13 @@ class GenAIService:
             print(f"NER 모델 로딩 실패: {e}")
             self.ner_pipeline = None
 
-    # 파라미터 값 업데이트
     def update_settings(self, new_settings: dict):
-        # Inference 실시간 서비스 설정 적용
         if "temperature" in new_settings:
             self.settings["temperature"] = new_settings["temperature"]
         if "max_tokens" in new_settings:
             self.settings["max_tokens"] = new_settings["max_tokens"]
 
-        print(f"추론 설정 변경됨: Temp={self.settings['temperature']}")
-
-        # Training 학습 설정 파일 생성
-        # UI에서 받은 10개 값 + UI에서 뺀 고정값을 합쳐서 저장
         training_args_config = {
-            # UI에서 온 값들
             "max_steps": new_settings.get("max_steps", 300),
             "evaluation_strategy": new_settings.get("evaluation_strategy", "steps"),
             "save_strategy": new_settings.get("save_strategy", "steps"),
@@ -99,10 +88,8 @@ class GenAIService:
             "eval_steps": new_settings.get("eval_steps", 20),
             "save_steps": new_settings.get("save_steps", 40),
             "logging_steps": new_settings.get("logging_steps", 1),
-
-            # UI에서 뺐지만 학습엔 꼭 필요한 고정값 (성공 스크립트 기준)
-            "per_device_train_batch_size": 1,  # 고정
-            "gradient_accumulation_steps": 8,  # 고정
+            "per_device_train_batch_size": 1,
+            "gradient_accumulation_steps": 8,
             "output_dir": "/workspace/finetune/outputs_llama3_c2",
             "load_best_model_at_end": True,
             "metric_for_best_model": "eval_loss",
@@ -111,18 +98,14 @@ class GenAIService:
             "report_to": "none"
         }
 
-        # JSON 파일로 저장
         try:
             with open("training_config.json", "w", encoding="utf-8") as f:
                 json.dump(training_args_config, f, indent=4)
-            print("training_config.json 파일 생성 완료 (고정값 포함)")
         except Exception as e:
             print(f"파일 저장 실패: {e}")
 
-    # RunPod 통신 함수
     def _call_llama3(self, instruction: str, input_text: str, max_tokens: int = None) -> str:
         final_max_tokens = max_tokens if max_tokens else self.settings["max_tokens"]
-
         headers = {'Content-Type': 'application/json'}
         payload = {
             "instruction": instruction,
@@ -133,26 +116,14 @@ class GenAIService:
         }
 
         try:
-            response = requests.post(
-                self.api_url,
-                headers=headers,
-                json=payload,
-                timeout=self.timeout
-            )
+            response = requests.post(self.api_url, headers=headers, json=payload, timeout=self.timeout)
             response.raise_for_status()
             result = response.json()
-
-            # 텍스트 정제 (JSON 파싱을 위해 특수문자 보존, 줄바꿈만 정리)
-            raw_text = result.get("text", "").strip()
-            clean_text = raw_text.replace('\r', '')
-
-            return clean_text
-
+            return result.get("text", "").strip().replace('\r', '')
         except Exception as e:
             print(f"RunPod Error: {e}")
             return "죄송합니다. AI 서버와 연결할 수 없습니다."
 
-    # 메타 데이터 추출 및 유틸리티
     def _extract_query_meta(self, text: str) -> QueryMeta:
         q = (text or "").strip()
         meta = QueryMeta()
@@ -160,207 +131,108 @@ class GenAIService:
             if gu in q:
                 meta.district = gu
                 break
-
-        # 연도 범위 추출
         range_pattern = r"(20\d{2})\s*[-~]\s*(20\d{2})"
         m = re.search(range_pattern, q)
         if m:
             y1, y2 = int(m.group(1)), int(m.group(2))
-            meta.start_year = min(y1, y2)
-            meta.end_year = max(y1, y2)
+            meta.start_year, meta.end_year = min(y1, y2), max(y1, y2)
         else:
             single_pattern = r"(20\d{2})"
             m2 = re.search(single_pattern, q)
             if m2:
                 y = int(m2.group(1))
-                meta.start_year = y
-                meta.end_year = y
+                meta.start_year, meta.end_year = y, y
             else:
-                meta.start_year = 2023
-                meta.end_year = 2030
-
-        # 범위 보정
-        if meta.start_year and meta.start_year < 2015: meta.start_year = 2015
-        if meta.end_year and meta.end_year > 2035: meta.end_year = 2035
-
+                meta.start_year, meta.end_year = 2023, 2030
         return meta
 
-    def _build_meta_with_overrides(self, text: str, *, district: str | None, start_year: int | None,
-                                   end_year: int | None) -> QueryMeta:
+    def _build_meta_with_overrides(self, text: str, **kwargs) -> QueryMeta:
         meta = self._extract_query_meta(text)
-        if district and district != "전체": meta.district = district.strip()
-        if start_year is not None: meta.start_year = int(start_year)
-        if end_year is not None: meta.end_year = int(end_year)
+        if kwargs.get('district') and kwargs['district'] != "전체": meta.district = kwargs['district'].strip()
+        if kwargs.get('start_year') is not None: meta.start_year = int(kwargs['start_year'])
+        if kwargs.get('end_year') is not None: meta.end_year = int(kwargs['end_year'])
         return meta
-
-    def _detect_indicator(self, text: str) -> tuple[Optional[str], Optional[str]]:
-        q = (text or "").strip().lower()
-        for keyword, (col, label) in INDICATOR_MAP.items():
-            if keyword in q: return col, label
-        return None, None
 
     def _format_change(self, start, end) -> str:
         if start is None or end is None: return "데이터 없음"
-        try:
-            s, e = float(start), float(end)
-        except:
-            return f"{start} -> {end}"
+        s, e = float(start), float(end)
         base = f"{int(round(s)):,} -> {int(round(e)):,}"
         if s == 0: return base
-        try:
-            diff = (e - s) / s * 100.0
-        except:
-            return base
-        sign = "+" if diff >= 0 else ""
-        return f"{base} ({sign}{diff:.1f}%)"
+        diff = (e - s) / s * 100.0
+        return f"{base} ({'+' if diff >= 0 else ''}{diff:.1f}%)"
 
-    def _save_chat_log(self, *, user_id, page, task_type, question, answer) -> None:
+    def _save_chat_log(self, **kwargs) -> None:
         try:
-            log = GenAIChatLog(user_id=user_id, page=page, task_type=task_type, question=question, answer=answer)
+            log = GenAIChatLog(**kwargs)
             db.session.add(log)
             db.session.commit()
         except Exception as e:
             print(f"로그 저장 실패: {e}")
             db.session.rollback()
 
-    def _query_forecast_rows(self, district: str, start_year: int, end_year: int) -> list[RegionForecast]:
-        return RegionForecast.query.filter(
-            RegionForecast.district == district,
-            RegionForecast.year >= start_year,
-            RegionForecast.year <= end_year
-        ).order_by(RegionForecast.year.asc()).all()
-
-    # 보고서 생성 (JSON 출력)
-    def generate_report_with_data(self, user_prompt: str, *, district: str | None = None, start_year: int | None = None,
-                                  end_year: int | None = None) -> str:
-        meta = self._build_meta_with_overrides(user_prompt, district=district, start_year=start_year, end_year=end_year)
+    def generate_report_with_data(self, user_prompt: str, **kwargs) -> str:
+        meta = self._build_meta_with_overrides(user_prompt, **kwargs)
         context = self._build_forecast_context(meta)
-
-        # 설정값에 저장된 JSON 전용 프롬프트 사용
         instruction = self.settings["system_prompt_report"]
         input_text = f"{context}\n\n[사용자 요청]: {meta.district}의 {meta.start_year}~{meta.end_year}년 예측 데이터를 분석해줘."
-
         return self._call_llama3(instruction, input_text)
 
-    # 정책 제안
-    def generate_policy(self, prompt: str, *, district: str | None = None, start_year: int | None = None,
-                        end_year: int | None = None) -> str:
-        meta = self._build_meta_with_overrides(prompt, district=district, start_year=start_year, end_year=end_year)
+    def generate_policy(self, prompt: str, **kwargs) -> str:
+        meta = self._build_meta_with_overrides(prompt, **kwargs)
         context = self._build_forecast_context(meta)
-
-        instruction = (
-            "너는 서울시 지역아동센터 관련 정책을 기획하는 보조자야. "
-            "제공된 데이터를 바탕으로 현실적인 돌봄·지원 정책 아이디어를 3개 제안해 줘. "
-            "JSON 형식이 아니라, 줄글로 편하게 작성해."
-        )
+        instruction = "서울시 지역아동센터 정책 기획 보조자로서 현실적인 정책 아이디어 3개를 줄글로 제안해줘."
         input_text = f"{context}\n\n[사용자 요청]: {prompt}"
-
         return self._call_llama3(instruction, input_text, max_tokens=500)
 
-    # 지표 설명
-    def explain_indicator(self, prompt: str, **kwargs) -> str:
-        return self._call_llama3("지표의 통계적 의미를 설명해줘.", prompt)
-
-    # QA (질의응답)
-    def answer_qa(self, question: str, *, district: str | None = None, start_year: int | None = None,
-                  end_year: int | None = None) -> str:
+    def answer_qa(self, question: str, **kwargs) -> str:
         user_q = (question or "").strip()
-
-        # 기존 로직에 따라 메타 데이터와 수치 컨텍스트를 생성함
-        meta = self._build_meta_with_overrides(user_q, district=district, start_year=start_year, end_year=end_year)
-        db_context = self._build_forecast_context(meta)
-
-        # RAG를 통해 여러 PDF 지침서에서 관련 내용을 찾아옴
+        meta = self._build_meta_with_overrides(user_q, **kwargs)
         pdf_context = self.rag_service.get_relevant_context(user_q)
 
-        # 질문에 상관없이 적용되는 범용 전문가 가드레일 프롬프트임
+        # 보고서 형식의 성공 사례를 적용한 구조적 인스트럭션
+        # 답변의 형식을 강제하여 모델의 이탈을 방지함
         instruction = (
-            "너는 서울시 아동 정책 및 지역아동센터 운영 전문가야. 아래의 답변 원칙을 엄격히 준수해.\n\n"
-            "1. 모든 답변은 제공된 [통계 데이터]와 [운영 지침]의 내용에만 근거해야 함.\n"
-            "2. [운영 지침]에서 질문과 관련된 직접적인 수치나 명시적 문구가 없다면, 절대로 추측하여 계산하거나 답하지 말 것.\n"
-            "3. 특히 '시설 운영비'와 종사자의 '인건비(급여)'는 완전히 다른 항목이므로 이를 혼동하여 답변하지 말 것.\n"
-            "4. 근거를 찾을 수 없는 경우 '현재 제공된 지침서 및 데이터에서는 관련 내용을 확인할 수 없습니다'라고 솔직하게 답변할 것.\n"
-            "5. 답변은 반드시 한국어로 작성하며, 전문가다운 신뢰감 있는 어조를 유지할 것.")
+            "당신은 서울시 아동복지 정책 전문 안내원입니다. "
+            "반드시 제공된 [운영 지침 및 법령 자료]를 바탕으로 답변 형식을 엄격히 준수하여 작성하십시오.\n\n"
+            "작성 형식:\n"
+            "**[핵심 답변]**: 질문에 대한 직접적인 답을 한 문장으로 요약\n"
+            "**[상세 안내]**: 자료에 명시된 수치와 규칙을 포함한 구체적 설명\n"
+            "**[근거 지침]**: 인용된 지침의 명칭이나 조항 번호\n\n"
+            "주의 사항:\n"
+            "- 제공된 자료에 없는 숫자를 임의로 생성하지 마십시오.\n"
+            "- 자료에 직접적인 답이 없다면 관련 있는 유사 지침을 안내하십시오.\n"
+            "- 답변에 ASSISTANT와 같은 추가 라벨을 붙이지 마십시오."
+        )
 
-
-        # AI에게 전달할 최종 입력 텍스트를 구성함
+        # 모델이 구조를 인식하기 쉽도록 입력 텍스트 설계
+        # 보고서 프롬프트처럼 명확한 데이터와 요청을 구분함
         input_text = (
-            f"[통계 데이터]\n{db_context}\n\n"
-            f"[운영 지침]\n{pdf_context}\n\n"
-            f"질문: {user_q}")
+            f"### [운영 지침 및 법령 자료]\n{pdf_context}\n\n"
+            f"### [사용자 질문]\n{user_q}\n\n"
+            "위 자료를 분석하여 정책 안내 형식에 맞춰 답변하십시오.\n"
+            "정책 전문가 답변:"
+        )
 
+        # 가독성을 위해 토큰 길이를 800으로 유지
+        return self._call_llama3(instruction, input_text, max_tokens=800)
 
-        # 설정된 타임아웃과 파라미터로 라마3 모델을 호출함
-        return self._call_llama3(instruction, input_text, max_tokens=600)
-
-    def answer_qa_with_log(self, question: str, *, user_id: int | None = None, page: str | None = None,
-                           district: str | None = None, start_year: int | None = None,
-                           end_year: int | None = None) -> str:
-        answer = self.answer_qa(question, district=district, start_year=start_year, end_year=end_year)
-        self._save_chat_log(user_id=user_id, page=page, task_type="qa", question=question, answer=answer)
+    def answer_qa_with_log(self, question: str, **kwargs) -> str:
+        answer = self.answer_qa(question, **kwargs)
+        self._save_chat_log(user_id=kwargs.get('user_id'), page=kwargs.get('page'), task_type="qa", question=question, answer=answer)
         return answer
 
-    # NER (개체명 인식)
-    def analyze_ner(self, text: str) -> list[dict]:
-        if not self.ner_pipeline or not text:
-            return []
-
-        try:
-            # 파이프라인 실행
-            results = self.ner_pipeline(text)
-
-            # 결과 정리 (중복 제거 및 점수 변환)
-            unique_entities = []
-            seen = set()
-
-            for r in results:
-                word = r['word'].replace("##", "")  # 토크나이저의 ## 제거
-                label = r['entity']
-                score = float(r['score'])
-
-                # 중복되지 않고, 2글자 이상인 의미 있는 단어만 추출
-                if word not in seen and len(word) > 1:
-                    seen.add(word)
-                    unique_entities.append({"word": word, "type": label, "score": score})
-
-            return unique_entities
-
-        except Exception as e:
-            print(f"NER 분석 중 오류: {e}")
-            return []
-
-    # Context Builders (Prompt Engineering)
     def _build_forecast_context(self, meta: QueryMeta) -> str:
         district = (meta.district or "").strip()
         if not district or district == "전체": return ""
-
-        s_year = meta.start_year if meta.start_year else 2023
-        e_year = meta.end_year if meta.end_year else 2030
-
-        rows = self._query_forecast_rows(district, s_year, e_year)
+        rows = RegionForecast.query.filter(RegionForecast.district == district, RegionForecast.year >= meta.start_year, RegionForecast.year <= meta.end_year).order_by(RegionForecast.year.asc()).all()
         if not rows: return ""
-
         first, last = rows[0], rows[-1]
-
-        def get_val(obj, key):
-            return getattr(obj, key, 0)
-
         feature_summaries = [
             f"예측 이용자 수: {self._format_change(first.predicted_child_user, last.predicted_child_user)}",
-            f"한부모 가구: {self._format_change(get_val(first, 'single_parent'), get_val(last, 'single_parent'))}",
-            f"기초생활수급: {self._format_change(get_val(first, 'basic_beneficiaries'), get_val(last, 'basic_beneficiaries'))}",
-            f"다문화 가구: {self._format_change(get_val(first, 'multicultural_hh'), get_val(last, 'multicultural_hh'))}",
-            f"학원 수: {self._format_change(get_val(first, 'academy_cnt'), get_val(last, 'academy_cnt'))}",
-            f"1인당 GRDP: {self._format_change(get_val(first, 'grdp'), get_val(last, 'grdp'))}",
-            f"인구수: {self._format_change(get_val(first, 'population'), get_val(last, 'population'))}"
+            f"한부모 가구: {self._format_change(first.single_parent, last.single_parent)}",
+            f"기초생활수급: {self._format_change(first.basic_beneficiaries, last.basic_beneficiaries)}",
+            f"다문화 가구: {self._format_change(first.multicultural_hh, last.multicultural_hh)}",
+            f"학원 수: {self._format_change(first.academy_cnt, last.academy_cnt)}",
+            f"1인당 GRDP: {self._format_change(first.grdp, last.grdp)}"
         ]
-
-        context_lines = [
-            "[데이터 요약]",
-            f"자치구: {district}, 기간: {s_year}~{e_year}",
-            "주요 지표 변화:", *[f"- {fs}" for fs in feature_summaries]
-        ]
-        return "\n".join(context_lines)
-
-    def _build_indicator_context(self, meta: QueryMeta, col: str, label: str) -> str:
-        return ""
+        return "\n".join(["[데이터 요약]", f"자치구: {district}, 기간: {meta.start_year}~{meta.end_year}", "주요 지표 변화:", *[f"- {fs}" for fs in feature_summaries]])

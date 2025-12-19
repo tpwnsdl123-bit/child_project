@@ -336,7 +336,7 @@ body.hero-page .top-menu-auth {
 }
 
 .hero-section.hero-qna {
-    background: url("/static/images/hero-qna.jpg") center/cover no-repeat !important;
+    background: url("/static/images/section3_qna.jpg") center/cover no-repeat !important;
 }
 
 .hero-section.hero-privacy {
@@ -348,7 +348,7 @@ body.hero-page .top-menu-auth {
 }
 
 .hero-section.hero-genai {
-    background: url("/static/images/genai-hero.jpg") center/cover no-repeat !important;
+    background: url("/static/images/genai_hero.png") center/cover no-repeat !important;
 }
 
 /* 모바일 전용 조정 (홈 섹션 높이 등)*/

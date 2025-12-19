@@ -1,4 +1,9 @@
-/* 예측 페이지 */
+/* 페이지 전체 배경색 설정 */
+body {
+    background-color: #f8fafc;
+}
+
+/* 예측 페이지 컨테이너 */
 .predict-left,
 .predict-right {
     background-color: transparent;
@@ -7,125 +12,104 @@
     padding: 0;
 }
 
-/* 필터 영역 */
+/* 필터 및 선택 영역 */
 .filter-area {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    margin: 20px 0 16px;
+    gap: 12px;
+    margin: 20px 0 24px;
 }
 
+/* 드롭다운 스타일 */
 .filter-select {
-    min-width: 230px;
-    height: 32px;
-    font-size: 14px;
+    min-width: 250px;
+    height: 42px;
+    font-size: 15px;
+    border-radius: 30px;
+    padding: 0 20px;
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
 }
 
+.filter-select:focus {
+    border-color: #a5b4fc;
+    box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.2);
+    outline: none;
+}
 
-
-/* 지도 카드 */
+/* 지도 카드 디자인 */
 .map-card {
     width: 100%;
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 20px;
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 30px;
     height: auto;
-    max-height: 420px;
+    max-height: 450px;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 .map-inner {
-    width: 90%;
+    width: 95%;
     height: 100%;
-    padding: 0;
     position: relative;
 }
 
-.map-inner svg {
-    width: 100%;
-    height: auto;
-    max-height: 380px;
-}
-
-/* 오른쪽 그래프/데이터 + 구분선 */
+/* 오른쪽 콘텐츠 영역 및 구분선 */
 .predict-right {
     position: relative;
-    padding-left: 32px;
+    padding-left: 40px;
 }
 
 .predict-right::before {
     content: "";
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 5%;
+    bottom: 5%;
     left: 0;
     width: 1px;
-    background-color: #e5e7eb;
+    background: linear-gradient(to bottom, transparent, #e2e8f0, transparent);
 }
 
+/* 데이터 출력 전 가이드 박스 */
 .predict-placeholder {
-    border: 1px dashed #d1d5db;
-    border-radius: 10px;
-    padding: 12px;
-    height: 170px;
+    background-color: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 20px;
+    height: 180px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #9ca3af;
+    color: #94a3b8;
     text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .predict-right .predict-placeholder:first-of-type {
-    height: 260px;
+    height: 280px;
 }
 
-/* 모델 성능 설명 */
+/* 모델 정보 텍스트 */
 .predict-model-info {
-    font-size: 0.65rem;
-    color: #4b5563;
-    margin-top: 0.5rem;
-    margin-bottom: 0.6rem;
-    line-height: 1.5;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 1rem;
+    line-height: 1.6;
     text-align: right;
 }
 
-/* 개인정보처리방침 */
-
-.logo-taike {
-    color: #6260f1;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-.privacy-intro {
-    text-align: center;
-    line-height: 1.7;
-    margin-bottom: 1rem;
-}
-
-.privacy-body {
-    background-color: #f5f7fb;
-    padding: 3rem 0;
-}
-
-.privacy-body-inner {
-    max-width: 900px;
-    background-color: #ffffff;
-    padding: 2.5rem 2rem;
-    border-radius: 8px;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
-    margin: 0 auto;
-}
-
-/* 서울 지도 스타일 */
-
+/* 지도 */
 .gu-region {
   transition: transform 0.15s ease-out, fill 0.15s ease-out;
   transform-origin: center;
   transform-box: fill-box;
+  cursor: pointer;
 }
 
 .gu-region.hovered {
@@ -135,6 +119,8 @@
 
 .gu-label {
   pointer-events: none;
+  font-size: 11px;
+  fill: #475569;
   transition: transform 0.15s ease-out, font-size 0.15s ease-out;
   transform-origin: center;
   transform-box: fill-box;
@@ -145,6 +131,7 @@
   font-weight: 700;
 }
 
+/* 선택된 구 색상 적용 */
 .gu-region.selected {
     fill: #93c5fd;
     transform: scale(1.1);
@@ -155,18 +142,17 @@
   transform: scale(1.08);
 }
 
-
-
+/* 툴팁 디자인 */
 .map-tooltip {
     position: absolute;
     display: none;
-    padding: 4px 8px;
-    border-radius: 999px;
+    padding: 6px 14px;
+    border-radius: 50px;
     background: rgba(15, 23, 42, 0.9);
-    color: #f9fafb;
-    font-size: 12px;
-    white-space: nowrap;
-    pointer-events: none;
-    transform: translate(8px, 8px);
-    z-index: 10;
+    backdrop-filter: blur(4px);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 100;
 }

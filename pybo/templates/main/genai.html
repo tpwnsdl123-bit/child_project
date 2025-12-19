@@ -3,293 +3,294 @@
 {% block body_class %}hero-page{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/genai.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='genai.css') }}">
 {% endblock %}
 
 {% block content %}
 <section class="hero-section hero-genai">
     <div class="hero-overlay"></div>
     <div class="container hero-inner">
-        <h1 class="hero-title">생성형 AI</h1>
-        <p class="hero-subtitle">미래 수요 예측 기반 정책 의사결정 도우미</p>
     </div>
 </section>
 
 <div class="container genai-wrapper mt-4 mb-5">
-    <div class="card genai-card">
+    <div class="row">
+        <div class="col-md-3 mb-4 mb-md-0">
+            <div class="genai-sidebar">
+                <ul class="nav flex-column sidebar-nav" id="genaiTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="report-tab" data-toggle="tab" href="#report" role="tab">
+                            <i class="bi bi-file-earmark-bar-graph"></i> 예측 보고서
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="policy-tab" data-toggle="tab" href="#policy" role="tab">
+                            <i class="bi bi-lightbulb"></i> 정책 제안
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="qa-tab" data-toggle="tab" href="#qa" role="tab">
+                            <i class="bi bi-chat-dots"></i> Q&A
+                        </a>
+                    </li>
+                    <li class="nav-divider"></li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-config-btn" href="#" data-toggle="modal" data-target="#configModal">
+                            <i class="bi bi-gear-wide-connected"></i> 모델 설정
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-        <ul class="nav nav-tabs px-3 pt-2" id="genaiTab" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="report-tab" data-toggle="tab" href="#report" role="tab">
-                    <i class="bi bi-file-earmark-bar-graph"></i> 예측 보고서
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="policy-tab" data-toggle="tab" href="#policy" role="tab">
-                    <i class="bi bi-lightbulb"></i> 정책 제안
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="qa-tab" data-toggle="tab" href="#qa" role="tab">
-                    <i class="bi bi-chat-dots"></i> 데이터 Q&A
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="config-tab" data-toggle="tab" href="#config" role="tab">
-                    <i class="bi bi-gear-wide-connected"></i> 모델 설정
-                </a>
-            </li>
-        </ul>
-
-        <div class="tab-content p-4">
-
-            <div class="tab-pane fade show active" id="report" role="tabpanel">
-                <div class="genai-tab-pane-title">미래 수요 예측 기반 자동 보고서</div>
-                <span class="genai-tab-desc d-block mb-4">자치구와 시점을 선택하면 AI가 데이터를 분석하여 보고서를 작성합니다.</span>
-
-                <form id="reportForm">
-                    <div class="form-row">
-                        <div class="col-md-4 mb-3">
-                            <label class="genai-form-label">분석할 지역</label>
-                            <select class="form-select" id="regionSelect">
-                                <option value="전체">서울시 전체</option>
-                                <option value="강남구">강남구</option>
-                                <option value="강동구">강동구</option>
-                                <option value="강북구">강북구</option>
-                                <option value="강서구">강서구</option>
-                                <option value="관악구">관악구</option>
-                                <option value="광진구">광진구</option>
-                                <option value="구로구">구로구</option>
-                                <option value="금천구">금천구</option>
-                                <option value="노원구">노원구</option>
-                                <option value="도봉구">도봉구</option>
-                                <option value="동대문구">동대문구</option>
-                                <option value="동작구">동작구</option>
-                                <option value="마포구">마포구</option>
-                                <option value="서대문구">서대문구</option>
-                                <option value="서초구">서초구</option>
-                                <option value="성동구">성동구</option>
-                                <option value="성북구">성북구</option>
-                                <option value="송파구">송파구</option>
-                                <option value="양천구">양천구</option>
-                                <option value="영등포구">영등포구</option>
-                                <option value="용산구">용산구</option>
-                                <option value="은평구">은평구</option>
-                                <option value="종로구">종로구</option>
-                                <option value="중구">중구</option>
-                                <option value="중랑구">중랑구</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-5 mb-3">
-                            <label class="genai-form-label">분석 기간 설정</label>
-                            <div class="d-flex align-items-center">
-                                <select class="form-select mr-2" id="startYear">
-                                    <option value="2023" selected>2023년</option>
-                                    <option value="2024">2024년</option>
-                                    <option value="2025">2025년</option>
-                                    <option value="2026">2026년</option>
-                                    <option value="2027">2027년</option>
-                                    <option value="2028">2028년</option>
-                                    <option value="2029">2029년</option>
-                                    <option value="2030">2030년</option>
-                                </select>
-                                <span class="font-weight-bold mx-2">~</span>
-                                <select class="form-select ml-2" id="endYear">
-                                    <option value="2023">2023년</option>
-                                    <option value="2024">2024년</option>
-                                    <option value="2025">2025년</option>
-                                    <option value="2026">2026년</option>
-                                    <option value="2027">2027년</option>
-                                    <option value="2028">2028년</option>
-                                    <option value="2029">2029년</option>
-                                    <option value="2030" selected>2030년</option>
-                                </select>
+        <div class="col-md-9">
+            <div class="card genai-main-card">
+                <div class="card-body p-4">
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="report" role="tabpanel">
+                            <div class="pane-header mb-4 pb-3 border-bottom">
+                                <h3>미래 수요 예측 기반 자동 보고서</h3>
+                                <p class="text-light-gray mb-0">자치구와 시점을 선택하면 AI가 데이터를 분석하여 보고서를 작성합니다.</p>
+                            </div>
+                            <form id="reportForm">
+                                <div class="form-row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="genai-form-label">분석할 지역</label>
+                                        <select class="form-control ant-input" id="regionSelect">
+                                            <option value="전체">서울시 전체</option>
+                                            <option value="강남구">강남구</option>
+                                            <option value="강동구">강동구</option>
+                                            <option value="강북구">강북구</option>
+                                            <option value="강서구">강서구</option>
+                                            <option value="관악구">관악구</option>
+                                            <option value="광진구">광진구</option>
+                                            <option value="구로구">구로구</option>
+                                            <option value="금천구">금천구</option>
+                                            <option value="노원구">노원구</option>
+                                            <option value="도봉구">도봉구</option>
+                                            <option value="동대문구">동대문구</option>
+                                            <option value="동작구">동작구</option>
+                                            <option value="마포구">마포구</option>
+                                            <option value="서대문구">서대문구</option>
+                                            <option value="서초구">서초구</option>
+                                            <option value="성동구">성동구</option>
+                                            <option value="성북구">성북구</option>
+                                            <option value="송파구">송파구</option>
+                                            <option value="양천구">양천구</option>
+                                            <option value="영등포구">영등포구</option>
+                                            <option value="용산구">용산구</option>
+                                            <option value="은평구">은평구</option>
+                                            <option value="종로구">종로구</option>
+                                            <option value="중구">중구</option>
+                                            <option value="중랑구">중랑구</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="genai-form-label">분석 기간 설정</label>
+                                        <div class="d-flex align-items-center">
+                                            <select class="form-control ant-input" id="startYear">
+                                                <option value="2023" selected>2023년</option>
+                                                <option value="2030">2030년</option>
+                                            </select>
+                                            <span class="mx-2 text-white font-weight-bold">~</span>
+                                            <select class="form-control ant-input" id="endYear">
+                                                <option value="2030" selected>2030년</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right mt-2">
+                                    <button type="submit" class="btn btn-ant-primary px-5 py-2">
+                                        <i class="bi bi-magic mr-2"></i> 보고서 생성
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="loadingSpinner" style="display: none;" class="text-center py-5">
+                                <div class="spinner-border text-light" role="status"></div>
+                                <p class="mt-2 font-weight-bold text-light">데이터를 분석 중입니다...</p>
+                            </div>
+                            <div id="reportPlaceholder" class="genai-result-placeholder mt-5 p-4 text-center">
+                                결과가 여기에 표시됩니다.
+                            </div>
+                            <div id="resultSection" style="display: none;" class="mt-5 pt-4 border-top">
+                                <h2 id="aiTitle" class="ai-report-title mb-4"></h2>
+                                <div class="ai-summary-box mb-4">
+                                    <div class="summary-tag mb-2">AI 요약</div>
+                                    <p id="aiSummary" class="mb-0"></p>
+                                </div>
+                                <div id="aiContent" class="ai-content-text p-4 result-text-box"></div>
                             </div>
                         </div>
 
-                        <div class="col-md-3 mb-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary genai-btn-main btn-block w-100">
-                                <i class="bi bi-magic"></i> 보고서 생성
-                            </button>
+                        <div class="tab-pane fade" id="policy" role="tabpanel">
+                            <div class="pane-header mb-4 pb-3 border-bottom">
+                                <h3>지역 맞춤형 정책 제안</h3>
+                                <p class="text-light-gray mb-0">필요한 정책 방향을 입력하면 구체적인 아이디어를 제안합니다.</p>
+                            </div>
+                            <textarea id="policy-input" class="form-control ant-input mb-3" rows="5" placeholder="예: 예산 절감을 위한 지역아동센터 운영 효율화 방안을 3가지 제안해줘."></textarea>
+                            <div class="text-right">
+                                <button id="policy-btn" class="btn btn-ant-primary px-5 py-2">
+                                    <i class="bi bi-lightbulb mr-2"></i> 아이디어 생성
+                                </button>
+                            </div>
+                            <div id="policyPlaceholder" class="genai-result-placeholder mt-5 p-4 text-center">
+                                결과가 여기에 표시됩니다.
+                            </div>
+                            <div id="policyResultArea" style="display:none;" class="genai-result-card mt-5 p-4 result-text-box" id="policy-result"></div>
+                        </div>
+
+                        <div class="tab-pane fade" id="qa" role="tabpanel">
+                            <div class="pane-header mb-4 pb-3 border-bottom">
+                                <h3>데이터 분석 Q&A</h3>
+                                <p class="text-light-gray mb-0">데이터나 지표에 대해 궁금한 점을 대화 형식으로 물어보세요.</p>
+                            </div>
+                            <div id="qa-chat-window" class="qa-chat-window mb-3 p-3">
+                                <div class="chat-bubble ai-bubble">
+                                    안녕하세요! 복지 데이터와 관련된 궁금한 점이 있으시면 언제든 질문해 주세요.
+                                </div>
+                            </div>
+                            <div class="qa-input-container">
+                                <div class="input-group">
+                                    <textarea id="qa-input" class="form-control ant-input chat-input" placeholder="질문을 입력하세요..." rows="1"></textarea>
+                                    <div class="input-group-append">
+                                        <button id="qa-btn" class="btn btn-ant-primary px-4">
+                                            <i class="bi bi-send-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </form>
-
-                <div id="loadingSpinner" style="display: none;">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2 font-weight-bold">데이터를 분석 중입니다... (약 10초 소요)</p>
-                </div>
-
-                <div id="resultSection" style="display: none;">
-                    <h2 id="aiTitle" class="ai-report-title"></h2>
-                    <div class="ai-summary-box">
-                        <strong>💡 요약:</strong> <span id="aiSummary"></span>
-                    </div>
-                    <div id="aiContent" class="ai-content-text"></div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="tab-pane fade" id="policy" role="tabpanel">
-                <div class="genai-tab-pane-title">지역 맞춤형 정책 제안</div>
-                <span class="genai-tab-desc d-block mb-3">필요한 정책 방향을 입력하면 구체적인 아이디어를 제안합니다.</span>
-
-                <textarea id="policy-input" class="form-control genai-textarea mb-3" rows="3" placeholder="예: 예산 절감을 위한 지역아동센터 운영 효율화 방안을 3가지 제안해줘."></textarea>
-                <button id="policy-btn" class="btn btn-primary genai-btn-main"><i class="bi bi-lightbulb"></i> 아이디어 생성</button>
-
-                <div class="genai-result-card card mt-3">
-                    <div class="card-body" id="policy-result" style="white-space: pre-line;">결과가 여기에 표시됩니다.</div>
+<div class="modal fade" id="configModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content config-modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center p-4">
+                <div>
+                    <h5 class="modal-title font-weight-bold">AI 모델 파이프라인 설정</h5>
+                    <p class="text-muted small mb-0">서비스 추론(Inference) 및 재학습(Retraining) 파라미터 관리 대시보드</p>
                 </div>
+                <button type="button" class="close m-0 p-0" data-dismiss="modal" aria-label="Close" style="font-size: 2rem;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-
-            <div class="tab-pane fade" id="qa" role="tabpanel">
-                <div class="genai-tab-pane-title">AI 데이터 분석관 (Q&A)</div>
-                <span class="genai-tab-desc d-block mb-3">데이터나 지표에 대해 궁금한 점을 물어보세요.</span>
-
-                <textarea id="qa-input" class="form-control genai-textarea mb-3" rows="3" placeholder="예: 강남구 아동 인구는 줄어드는데 왜 사교육 지표는 상승하는 거야?"></textarea>
-                <button id="qa-btn" class="btn btn-primary genai-btn-main"><i class="bi bi-chat-dots"></i> 질문하기</button>
-
-                <div class="genai-result-card card mt-3">
-                    <div class="card-body" id="qa-result" style="white-space: pre-line;">답변이 여기에 표시됩니다.</div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="config" role="tabpanel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <div class="genai-tab-pane-title mb-1">AI 모델 파이프라인 설정</div>
-                        <span class="text-muted small">서비스 추론(Inference) 및 재학습(Retraining) 파라미터 관리 대시보드</span>
-                    </div>
-                    <button type="submit" form="configForm" class="btn btn-dark font-weight-bold px-4">
-                        <i class="bi bi-save"></i> 설정 저장
-                    </button>
-                </div>
-
+            <div class="modal-body p-4">
                 <form id="configForm">
-
-                    <div class="config-card mb-4" style="border-top: 3px solid #0d6efd;">
+                    <div class="config-group-box mb-4 p-3 border rounded bg-light">
                         <div class="row align-items-center">
-                            <div class="col-md-3 border-right">
-                                <h5 class="font-weight-bold text-primary mb-1"><i class="bi bi-lightning-charge-fill"></i> 실시간 서비스</h5>
+                            <div class="col-md-2">
+                                <h6 class="font-weight-bold text-primary mb-1"><i class="bi bi-lightning-charge-fill"></i> 실시간 서비스</h6>
                                 <p class="text-muted small mb-0">답변 생성 스타일에 즉시 반영됩니다.</p>
                             </div>
-                            <div class="col-md-9">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="config-label">Temperature (창의성)</label>
-                                        <input type="number" step="0.05" min="0.1" max="1.0" class="form-control" id="temperature" value="0.35">
-                                        <div class="config-desc">권장: <span class="highlight-text">0.1~0.4</span>(분석), <span class="highlight-text">0.7~1.0</span>(창작)</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="config-label">Max Tokens (길이)</label>
-                                        <input type="number" class="form-control" id="max_tokens" value="600">
-                                        <div class="config-desc">권장: <span class="highlight-text">512~1024</span>. 너무 짧으면 답변 잘림.</div>
-                                    </div>
-                                </div>
+                            <div class="col-md-5">
+                                <label class="config-label font-weight-bold">Temperature (창의성)</label>
+                                <input type="number" step="0.05" min="0.1" max="1.0" class="form-control bg-white" id="temperature" value="0.35">
+                                <p class="text-muted small mt-1 mb-0">권장: 0.1~0.4(분석), 0.7~1.0(창작)</p>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="config-label font-weight-bold">Max Tokens (길이)</label>
+                                <input type="number" class="form-control bg-white" id="max_tokens" value="600">
+                                <p class="text-muted small mt-1 mb-0">권장: 512~1024. 너무 짧으면 답변 잘림.</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-flex align-items-center mb-3">
-                        <h5 class="mb-0 font-weight-bold"><i class="bi bi-sliders"></i> 재학습 파라미터 (Training Arguments)</h5>
-                        <span class="badge badge-secondary ml-2">Admin Only</span>
-                    </div>
+                    <h6 class="font-weight-bold mb-3"><i class="bi bi-sliders"></i> 재학습 파라미터 (Training Arguments) <span class="badge badge-danger ml-2">Admin Only</span></h6>
 
                     <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="config-card">
-                                <div class="config-section-title">1. 학습 전략 (Strategy)</div>
-
+                        <div class="col-md-4">
+                            <div class="config-sub-card p-3 border rounded bg-white">
+                                <h6 class="font-weight-bold mb-3 border-bottom pb-2 text-dark">1. 학습 전략 (Strategy)</h6>
                                 <div class="form-group">
-                                    <label class="config-label">max_steps</label>
-                                    <input type="number" class="form-control" id="max_steps" value="300">
-                                    <div class="config-desc">총 반복 횟수. 권장: 300~1000 (데이터 양 비례)</div>
+                                    <label class="small font-weight-bold text-dark">max_steps</label>
+                                    <input type="number" class="form-control bg-white text-dark" id="max_steps" value="300">
+                                    <p class="text-muted small mt-1 mb-2">총 반복 횟수. 권장: 300~1000 (데이터 양 비례)</p>
                                 </div>
-
                                 <div class="form-group">
-                                    <label class="config-label">evaluation_strategy</label>
-                                    <select class="form-control" id="evaluation_strategy">
+                                    <label class="small font-weight-bold text-dark">evaluation_strategy</label>
+                                    <select class="form-control bg-white text-dark" id="evaluation_strategy">
                                         <option value="steps" selected>steps</option>
                                         <option value="epoch">epoch</option>
                                         <option value="no">no</option>
                                     </select>
-                                    <div class="config-desc">평가 수행 기준 (steps: 스텝마다)</div>
+                                    <p class="text-muted small mt-1 mb-2">평가 수행 기준 (steps: 스텝마다)</p>
                                 </div>
-
-                                <div class="form-group mb-0">
-                                    <label class="config-label">save_strategy</label>
-                                    <select class="form-control" id="save_strategy">
+                                <div class="form-group">
+                                    <label class="small font-weight-bold text-dark">save_strategy</label>
+                                    <select class="form-control bg-white text-dark" id="save_strategy">
                                         <option value="steps" selected>steps</option>
                                         <option value="epoch">epoch</option>
                                         <option value="no">no</option>
                                     </select>
-                                    <div class="config-desc">체크포인트 저장 기준</div>
+                                    <p class="text-muted small mt-1 mb-0">체크포인트 저장 기준</p>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-md-4 mb-3">
-                            <div class="config-card">
-                                <div class="config-section-title">2. 최적화 (Optimizer)</div>
-
+                        <div class="col-md-4">
+                            <div class="config-sub-card p-3 border rounded bg-white">
+                                <h6 class="font-weight-bold mb-3 border-bottom pb-2 text-dark">2. 최적화 (Optimizer)</h6>
                                 <div class="form-group">
-                                    <label class="config-label">learning_rate</label>
-                                    <input type="text" class="form-control" id="learning_rate" value="1e-4">
-                                    <div class="config-desc">학습 속도. 권장: <span class="highlight-text">1e-4 ~ 2e-4</span> (LoRA)</div>
+                                    <label class="small font-weight-bold text-dark">learning_rate</label>
+                                    <input type="text" class="form-control bg-white text-dark" id="learning_rate" value="1e-4">
+                                    <p class="text-muted small mt-1 mb-2">학습 속도. 권장: 1e-4 ~ 2e-4 (LoRA)</p>
                                 </div>
-
                                 <div class="form-group">
-                                    <label class="config-label">optim</label>
-                                    <input type="text" class="form-control" id="optim" value="paged_adamw_8bit">
-                                    <div class="config-desc">최적화 알고리즘 (8bit AdamW 권장)</div>
+                                    <label class="small font-weight-bold text-dark">optim</label>
+                                    <input type="text" class="form-control bg-white text-dark" id="optim" value="paged_adamw_8bit">
+                                    <p class="text-muted small mt-1 mb-2">최적화 알고리즘 (8bit AdamW 권장)</p>
                                 </div>
-
-                                <div class="form-group mb-0">
-                                    <label class="config-label">weight_decay</label>
-                                    <input type="number" step="0.01" class="form-control" id="weight_decay" value="0.01">
-                                    <div class="config-desc">가중치 규제값. 권장: 0.01 ~ 0.1</div>
+                                <div class="form-group">
+                                    <label class="small font-weight-bold text-dark">weight_decay</label>
+                                    <input type="number" step="0.01" class="form-control bg-white text-dark" id="weight_decay" value="0.01">
+                                    <p class="text-muted small mt-1 mb-0">가중치 규제값. 권장: 0.01 ~ 0.1</p>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-md-4 mb-3">
-                            <div class="config-card">
-                                <div class="config-section-title">3. 세부 주기 (Steps)</div>
-
+                        <div class="col-md-4">
+                            <div class="config-sub-card p-3 border rounded bg-white">
+                                <h6 class="font-weight-bold mb-3 border-bottom pb-2 text-dark">3. 세부 주기 (Steps)</h6>
                                 <div class="row">
                                     <div class="col-6 form-group">
-                                        <label class="config-label">warmup</label>
-                                        <input type="number" class="form-control" id="warmup_steps" value="20">
-                                        <div class="config-desc">초기 예열 (전체의 5%)</div>
+                                        <label class="small font-weight-bold text-dark">warmup</label>
+                                        <input type="number" class="form-control bg-white text-dark" id="warmup_steps" value="20">
+                                        <p class="text-muted small mt-1 mb-0">초기 예열 (전체의 5%)</p>
                                     </div>
                                     <div class="col-6 form-group">
-                                        <label class="config-label">eval</label>
-                                        <input type="number" class="form-control" id="eval_steps" value="20">
-                                        <div class="config-desc">평가 주기</div>
+                                        <label class="small font-weight-bold text-dark">eval</label>
+                                        <input type="number" class="form-control bg-white text-dark" id="eval_steps" value="20">
+                                        <p class="text-muted small mt-1 mb-0">평가 주기</p>
                                     </div>
                                 </div>
-
-                                <div class="row">
-                                    <div class="col-6 form-group mb-0">
-                                        <label class="config-label">save</label>
-                                        <input type="number" class="form-control" id="save_steps" value="40">
-                                        <div class="config-desc">저장 주기</div>
+                                <div class="row mt-3">
+                                    <div class="col-6 form-group">
+                                        <label class="small font-weight-bold text-dark">save</label>
+                                        <input type="number" class="form-control bg-white text-dark" id="save_steps" value="40">
+                                        <p class="text-muted small mt-1 mb-0">저장 주기</p>
                                     </div>
-                                    <div class="col-6 form-group mb-0">
-                                        <label class="config-label">logging</label>
-                                        <input type="number" class="form-control" id="logging_steps" value="1">
-                                        <div class="config-desc">로그 기록 주기</div>
+                                    <div class="col-6 form-group">
+                                        <label class="small font-weight-bold text-dark">logging</label>
+                                        <input type="number" class="form-control bg-white text-dark" id="logging_steps" value="1">
+                                        <p class="text-muted small mt-1 mb-0">로그 기록 주기</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </form>
-
-                <div id="configAlert" class="mt-3" style="display:none;"></div>
             </div>
-
-        </div> </div> </div> {% endblock %}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+                <button type="submit" form="configForm" class="btn btn-dark font-weight-bold px-4"><i class="bi bi-save"></i> 설정 저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block script %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

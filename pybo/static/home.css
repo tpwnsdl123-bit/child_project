@@ -483,7 +483,7 @@ body.home-page .section-full {
 }
 
 .genai-home-card {
-    background-image: url("/static/images/genai-hero.jpg");
+    background-image: url("/static/images/genai_hero.png");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

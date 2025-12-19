@@ -1,14 +1,14 @@
 import os
+import json
+from typing import Dict, Any, Optional
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader  # DirectoryLoader 추가
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+from langchain_core.documents import Document
 
 class RagService:
     def __init__(self):
         self.persist_directory = "data/chroma_db"
-        self.pdf_dir = "data/pdfs"
+        self.jsonl_path = "data/jsonl/rag_data.jsonl"
 
         self.embeddings = HuggingFaceEmbeddings(
             model_name="jhgan/ko-sroberta-multitask",
@@ -18,29 +18,97 @@ class RagService:
         self.vector_db = self._prepare_vector_db()
 
     def _prepare_vector_db(self):
-        # 만약 기존 DB가 있다면 로드
         if os.path.exists(self.persist_directory) and os.listdir(self.persist_directory):
-            print("기존 크로마디비를 로드합니다.")
             return Chroma(persist_directory=self.persist_directory, embedding_function=self.embeddings)
 
-        print("새로운 PDF 데이터를 인덱싱합니다...")
+        if not os.path.exists(self.jsonl_path):
+            return None
 
-        # 폴더 내 모든 PDF를 읽어옴
-        loader = DirectoryLoader(self.pdf_dir, glob="*.pdf", loader_cls=PyPDFLoader)
-        documents = loader.load()
+        documents = []
+        with open(self.jsonl_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
 
-        # 텍스트 쪼개기
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
-        chunks = text_splitter.split_documents(documents)
+                data = json.loads(line)
+                doc_name = data.get('doc', '')
 
-        # 벡터 DB 생성 및 저장
+                doc_type = "etc"
+                if "복지법" in doc_name:
+                    doc_type = "law"
+                elif "지원사업" in doc_name:
+                    doc_type = "support"
+                elif "인건비" in doc_name:
+                    doc_type = "salary"
+
+                combined_text = (
+                    f"문서: {doc_name}\n"
+                    f"항목: {data.get('section', '')}\n"
+                    f"규칙: {data.get('rule', '')}\n"
+                    f"수치: {data.get('numeric', '')}\n"
+                    f"근거: {data.get('basis', '')}"
+                )
+
+                doc = Document(
+                    page_content=combined_text,
+                    metadata={
+                        "doc_type": doc_type,
+                        "doc": doc_name,
+                        "basis": data.get("basis", "")
+                    }
+                )
+                documents.append(doc)
+
+        # 문서가 하나도 없을 경우 에러 방지 처리
+        if not documents:
+            return None
+
         return Chroma.from_documents(
-            documents=chunks,
+            documents=documents,
             embedding=self.embeddings,
             persist_directory=self.persist_directory
         )
 
+    # 인스턴스 변수를 사용하지 않으므로 정적 메서드로 전환하여 린터 경고 해결
+    @staticmethod
+    def _route_doc_type(question: str) -> Optional[str]:
+        q = (question or "").lower()
+        if any(k in q for k in ["인건비", "급여", "호봉", "수당", "보수", "연봉", "돈", "월급"]):
+            return "salary"
+        if any(k in q for k in ["지원", "보조금", "운영비", "배치기준", "정원", "시설장", "생활복지사"]):
+            return "support"
+        if any(k in q for k in ["법", "조문", "시행령", "시행규칙", "아동복지법"]):
+            return "law"
+        return None
+
     def get_relevant_context(self, question: str) -> str:
-        # 질문과 가장 유사한 본문 2개 추출
-        docs = self.vector_db.similarity_search(question, k=4)
-        return "\n\n".join([doc.page_content for doc in docs])
+        if not self.vector_db:
+            return "참조할 수 있는 운영 지침 데이터가 없습니다."
+
+        doc_type = self._route_doc_type(question)
+
+        # 타입 힌트를 명시하여 딕셔너리 구조에 대한 경고 방지
+        search_kwargs: Dict[str, Any] = {
+            "k": 4,
+            "fetch_k": 20,
+            "lambda_mult": 0.5
+        }
+
+        if doc_type:
+            search_kwargs["filter"] = {"doc_type": doc_type}
+
+        retriever = self.vector_db.as_retriever(
+            search_type="mmr",
+            search_kwargs=search_kwargs
+        )
+
+        # 랭체인 최신 표준인 invoke 메서드 사용
+        docs = retriever.invoke(question)
+
+        lines = []
+        for d in docs:
+            src = d.metadata.get("doc", "알 수 없음")
+            lines.append(f"[출처: {src}]\n{d.page_content}")
+
+        return "\n\n---\n\n".join(lines)
