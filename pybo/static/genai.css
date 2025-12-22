@@ -62,7 +62,7 @@ body {
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
     background: #f8f9fa; /* 아주 연한 회색 (아이보리/그레이 톤) */
     color: #2d3748; /* 기본 글자색 어둡게 변경 */
-    height: 100%; /* 우측 카드는 높이 유지 (보기 좋음) */
+    height: 100%; /* 우측 카드는 높이 유지 */
 }
 
 .pane-header h3 {

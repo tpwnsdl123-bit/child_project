@@ -57,7 +57,7 @@ for gu, df_gu in df.groupby("district"):
 
 cagr_arr = np.array(cagr_list)
 
-# 양쪽 5% 꼬리는 제거: 중앙 90% 범위를 신뢰 구간으로 사용
+# 양쪽 5% 제거: 중앙 90% 범위를 신뢰 구간으로 사용
 MIN_CAGR = np.quantile(cagr_arr, 0.05)   # 하위 5%
 MAX_CAGR = np.quantile(cagr_arr, 0.95)   # 상위 5%
 

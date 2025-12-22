@@ -169,6 +169,6 @@ print(future_df.head(10))
 diff_rate = (future_df["child_user"] != future_df["child_user_raw"]).mean()
 print("캡핑 걸린 비율:", diff_rate)
 
-# 어느 정도로 바뀌었는지 보기 (몇 개만)
+# 어느 정도로 바뀌었는지 보기
 future_df["ratio"] = future_df["child_user"] / future_df["child_user_raw"]
 print(future_df[["district", "year", "child_user_raw", "child_user", "ratio"]].head(30))

@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    // ============================ ================================
-    // 1. 연도 선택 스마트 로직 (시작 연도에 따라 종료 연도 자동 변경)
-    // ============================================================
+    // 연도 선택 스마트 로직 (시작 연도에 따라 종료 연도 자동 변경)
     const startSelect = document.getElementById('startYear');
     const endSelect = document.getElementById('endYear');
     const MAX_YEAR = 2030;
@@ -31,10 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
         updateEndYearOptions();
     }
 
-
-    // ============================================================
-    // 2. [보고서 생성 탭] (ID 수정 완료)
-    // ============================================================
+    // 보고서 생성 탭
     const reportForm = document.getElementById("reportForm");
     const resultSection = document.getElementById("resultSection");
     const loadingSpinner = document.getElementById("loadingSpinner");
@@ -113,10 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-
-    // ============================================================
-    // 3. [정책 아이디어 탭]
-    // ============================================================
+    // [정책 아이디어 탭]
     const policyBtn = document.getElementById("policy-btn");
     const policyInput = document.getElementById("policy-input");
     const policyResultBox = document.getElementById("policy-result");
@@ -152,10 +144,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-
-    // ============================================================
-    // 4. [AI Q&A 탭]
-    // ============================================================
+    // Q&A 탭
     const qaBtn = document.getElementById("qa-btn");
     const qaInput = document.getElementById("qa-input");
     const qaResult = document.getElementById("qa-result");
@@ -190,9 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
-
-
-    // genai.js (configForm 리스너 전체 교체)
 
     const configForm = document.getElementById("configForm");
 
