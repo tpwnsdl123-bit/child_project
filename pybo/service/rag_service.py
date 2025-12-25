@@ -88,18 +88,15 @@ class RagService:
 
         doc_type = self._route_doc_type(question)
 
-        # 타입 힌트를 명시하여 딕셔너리 구조에 대한 경고 방지
-        search_kwargs: Dict[str, Any] = {
-            "k": 4,
-            "fetch_k": 20,
-            "lambda_mult": 0.5
-        }
+        # MMR 대신 속도가 빠른 similarity 검색 사용
+        search_kwargs: Dict[str, Any] = {"k": 3}  # 검색 결과 개수를 3개로 최적화
 
         if doc_type:
             search_kwargs["filter"] = {"doc_type": doc_type}
 
+        # search_type을 similarity로 변경하여 연산 속도 향상
         retriever = self.vector_db.as_retriever(
-            search_type="mmr",
+            search_type="similarity",
             search_kwargs=search_kwargs
         )
 

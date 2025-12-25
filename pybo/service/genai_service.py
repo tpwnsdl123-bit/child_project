@@ -1,33 +1,15 @@
 import requests
 import json
-import re
 import os
+import time  # 시간 측정을 위해 추가
 from dotenv import load_dotenv
 from dataclasses import dataclass
 from typing import Optional
-
-from transformers import pipeline
-
 from pybo import db
-from pybo.models import GenAIChatLog, RegionForecast
-from pybo.service.rag_service import RagService
+from pybo.models import RegionForecast
+from sqlalchemy import func
 
 load_dotenv()
-
-DISTRICTS = [
-    "종로구", "중구", "용산구", "성동구", "광진구", "동대문구", "중랑구", "성북구", "강북구", "도봉구",
-    "노원구", "은평구", "서대문구", "마포구", "양천구", "강서구", "구로구", "금천구", "영등포구", "동작구",
-    "관악구", "서초구", "강남구", "송파구", "강동구",
-]
-
-INDICATOR_MAP = {
-    "한부모": ("single_parent", "한부모 가구 수"),
-    "기초생활": ("basic_beneficiaries", "기초생활수급자 수"),
-    "다문화": ("multicultural_hh", "다문화 가구 수"),
-    "학원": ("academy_cnt", "학원 수"),
-    "grdp": ("grdp", "1인당 GRDP"),
-    "인구": ("population", "자치구 인구수"),
-}
 
 
 @dataclass
@@ -38,190 +20,158 @@ class QueryMeta:
 
 
 class GenAIService:
-    settings = {
-        "temperature": 0.35,
-        "max_tokens": 600,
-        "system_prompt_report": (
-            "너는 서울시 아동 돌봄 정책 전문 데이터 분석가야. "
-            "주어진 [데이터 요약]을 바탕으로 정책 담당자용 보고서를 작성해.\n"
-            "**반드시 아래 JSON 형식으로만 답변해야 해.** 설명이나 사족을 붙이지 마.\n\n"
-            "{\n"
-            '  "title": "보고서 제목",\n'
-            '  "summary": "핵심 내용 3줄 요약",\n'
-            '  "content": "상세 분석 내용 (평서문으로 작성)"\n'
-            "}"
-        )
-    }
-
     def __init__(self) -> None:
-        # 오라클 클라우드 환경 변수에서 팟 ID를 가져옵니다.
-        self.ai_pod_id = os.getenv("AI_POD_ID")
-        self.api_key = os.getenv("RUNPOD_API_KEY")
+        self.api_url = os.getenv("RUNPOD_API_URL")
+        self._rag_service = None
+        # 세션을 미리 생성하여 연결 속도를 높입니다.
+        self.session = requests.Session()
+        self.default_settings = {"temperature": 0.1, "max_tokens": 300}
 
-        # 런포드 팟 프록시 URL 설정
-        if self.ai_pod_id:
-            self.api_url = f"https://{self.ai_pod_id}-8000.proxy.runpod.net/generate"
-            print(f"GenAIService: 런포드 팟 모드 활성화. 주소: {self.api_url}")
-        else:
-            self.api_url = os.getenv("RUNPOD_API_URL")
-            print("GenAIService: 기본 API URL 사용 중.")
+    @property
+    def rag_service(self):
+        """Q&A가 필요할 때만 RAG 서비스를 로드합니다 (Lazy Loading)."""
+        if self._rag_service is None:
+            from pybo.service.rag_service import RagService
+            print("--- 무거운 임베딩 모델 로딩 중... ---")
+            self._rag_service = RagService()
+        return self._rag_service
 
-        self.timeout = 180
-        self.rag_service = RagService()
-
-        # NER 모델 로딩
-        print("NER 모델을 로딩 중입니다...")
-        try:
-            self.ner_pipeline = pipeline("ner", model="Leo97/KoELECTRA-small-v3-modu-ner")
-            print("NER 모델 로딩 완료!")
-        except Exception as e:
-            print(f"NER 모델 로딩 실패: {e}")
-            self.ner_pipeline = None
-
-    def update_settings(self, new_settings: dict):
-        if "temperature" in new_settings:
-            self.settings["temperature"] = new_settings["temperature"]
-        if "max_tokens" in new_settings:
-            self.settings["max_tokens"] = new_settings["max_tokens"]
-
-    def _call_llama3(self, instruction: str, input_text: str, max_tokens: int = None) -> str:
-        final_max_tokens = max_tokens if max_tokens else self.settings["max_tokens"]
-
-        # Llama 3 프롬프트 템플릿 적용
-        prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{instruction}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{input_text}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
-        }
-
-        # 팟 추론 서버용 페이로드 구성
+    def _call_llama3(self, instruction: str, input_text: str, max_tokens: int = None,
+                     model_version: str = "final") -> str:
+        start = time.time()  # 추론 시간 측정 시작
+        headers = {'Content-Type': 'application/json'}
         payload = {
-            "prompt": prompt,
-            "max_tokens": final_max_tokens,
-            "temperature": self.settings["temperature"],
-            "stop": ["<|eot_id|>"]
+            "instruction": instruction,
+            "input": input_text,
+            "model_version": model_version,
+            "max_new_tokens": max_tokens or self.default_settings["max_tokens"],
+            "temperature": self.default_settings["temperature"]
         }
-
         try:
-            response = requests.post(self.api_url, headers=headers, json=payload, timeout=self.timeout)
+            # 런포드 서버로 요청 전송
+            response = self.session.post(self.api_url, json=payload, timeout=180)
             response.raise_for_status()
-            result = response.json()
-            # 팟 서버 응답 구조에서 텍스트 추출
-            return result.get("text", result.get("generated_text", "")).strip().replace('\r', '')
+            print(f"--- AI 추론 완료 (소요시간: {time.time() - start:.2f}초) ---")  #
+            return response.json().get("text", "").strip()
         except Exception as e:
-            print(f"RunPod Error: {e}")
-            return "죄송합니다. AI 서버와 연결할 수 없습니다."
-
-    def _extract_query_meta(self, text: str) -> QueryMeta:
-        q = (text or "").strip()
-        meta = QueryMeta()
-        for gu in DISTRICTS:
-            if gu in q:
-                meta.district = gu
-                break
-        range_pattern = r"(20\d{2})\s*[-~]\s*(20\d{2})"
-        m = re.search(range_pattern, q)
-        if m:
-            y1, y2 = int(m.group(1)), int(m.group(2))
-            meta.start_year, meta.end_year = min(y1, y2), max(y1, y2)
-        else:
-            single_pattern = r"(20\d{2})"
-            m2 = re.search(single_pattern, q)
-            if m2:
-                y = int(m2.group(1))
-                meta.start_year, meta.end_year = y, y
-            else:
-                meta.start_year, meta.end_year = 2023, 2030
-        return meta
-
-    def _build_meta_with_overrides(self, text: str, **kwargs) -> QueryMeta:
-        meta = self._extract_query_meta(text)
-        if kwargs.get('district') and kwargs['district'] != "전체": meta.district = kwargs['district'].strip()
-        if kwargs.get('start_year') is not None: meta.start_year = int(kwargs['start_year'])
-        if kwargs.get('end_year') is not None: meta.end_year = int(kwargs['end_year'])
-        return meta
-
-    def _format_change(self, start, end) -> str:
-        if start is None or end is None: return "데이터 없음"
-        s, e = float(start), float(end)
-        base = f"{int(round(s)):,} -> {int(round(e)):,}"
-        if s == 0: return base
-        diff = (e - s) / s * 100.0
-        return f"{base} ({'+' if diff >= 0 else ''}{diff:.1f}%)"
-
-    def _save_chat_log(self, **kwargs) -> None:
-        try:
-            log = GenAIChatLog(**kwargs)
-            db.session.add(log)
-            db.session.commit()
-        except Exception as e:
-            print(f"로그 저장 실패: {e}")
-            db.session.rollback()
+            return f"Error communicating with AI server: {e}"
 
     def generate_report_with_data(self, user_prompt: str, **kwargs) -> str:
-        meta = self._build_meta_with_overrides(user_prompt, **kwargs)
-        context = self._build_forecast_context(meta)
-        instruction = self.settings["system_prompt_report"]
-        input_text = f"{context}\n\n[사용자 요청]: {meta.district}의 {meta.start_year}~{meta.end_year}년 예측 데이터를 분석해줘."
-        return self._call_llama3(instruction, input_text)
+        start_all = time.time()
+        print(f"\n[로그 1] 함수 진입 완료: {time.time() - start_all:.4f}s")  #
 
-    def generate_policy(self, prompt: str, **kwargs) -> str:
-        meta = self._build_meta_with_overrides(prompt, **kwargs)
-        context = self._build_forecast_context(meta)
-        instruction = "서울시 지역아동센터 정책 기획 보조자로서 현실적인 정책 아이디어 3개를 줄글로 제안해줘."
-        input_text = f"{context}\n\n[사용자 요청]: {prompt}"
-        return self._call_llama3(instruction, input_text, max_tokens=500)
+        meta = self._extract_query_meta(user_prompt)
+        meta.district = kwargs.get('district', meta.district)
+        meta.end_year = kwargs.get('end_year', meta.end_year)
+        meta.start_year = kwargs.get('start_year', 2023)
+        print(f"[로그 2] 메타데이터 추출 완료: {time.time() - start_all:.4f}s")  #
 
-    def answer_qa(self, question: str, **kwargs) -> str:
-        user_q = (question or "").strip()
-        meta = self._build_meta_with_overrides(user_q, **kwargs)
-        pdf_context = self.rag_service.get_relevant_context(user_q)
+        # --- 여기서 시간이 걸리는지 확인 ---
+        print(f"[로그 3] DB 조회 시작...")  #
+        sql_context = self._build_forecast_context(meta)
+        print(f"[로그 4] DB 조회 및 가공 완료: {time.time() - start_all:.4f}s")  #
+        # -----------------------------
 
-        # 보고서 형식의 성공 사례를 적용한 구조적 인스트럭션
-        # 답변의 형식을 강제하여 모델의 이탈을 방지함
         instruction = (
-            "당신은 서울시 아동복지 정책 전문 안내원입니다. "
-            "반드시 제공된 [운영 지침 및 법령 자료]를 바탕으로 답변 형식을 엄격히 준수하여 작성하십시오.\n\n"
-            "작성 형식:\n"
-            "**[핵심 답변]**: 질문에 대한 직접적인 답을 한 문장으로 요약\n"
-            "**[상세 안내]**: 자료에 명시된 수치와 규칙을 포함한 구체적 설명\n"
-            "**[근거 지침]**: 인용된 지침의 명칭이나 조항 번호\n\n"
-            "주의 사항:\n"
-            "- 제공된 자료에 없는 숫자를 임의로 생성하지 마십시오.\n"
-            "- 자료에 직접적인 답이 없다면 관련 있는 유사 지침을 안내하십시오.\n"
-            "- 답변에 ASSISTANT와 같은 추가 라벨을 붙이지 마십시오."
+            "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답해.\n"
+            "아래 형식을 정확히 지켜. (딱 3줄만, 추가 문장/설명 금지)\n"
+            "- 요약: 한 문장\n"
+            "- 가능 요인: 한 문장\n"
+            "- 추가 데이터: 한 문장\n"
         )
+        input_text = f"지역:{meta.district}\n기간:{meta.start_year}-{meta.end_year}\n데이터:\n{sql_context}"
 
-        # 모델이 구조를 인식하기 쉽도록 입력 텍스트 설계
-        # 보고서 프롬프트처럼 명확한 데이터와 요청을 구분함
-        input_text = (
-            f"### [운영 지침 및 법령 자료]\n{pdf_context}\n\n"
-            f"### [사용자 질문]\n{user_q}\n\n"
-            "위 자료를 분석하여 정책 안내 형식에 맞춰 답변하십시오.\n"
-            "정책 전문가 답변:"
+        print(f"[로그 5] 런포드 요청 직전: {time.time() - start_all:.4f}s")  #
+
+        # 여기서 런포드 터미널 로그와 대조해봐야 합니다.
+        raw_response = self._call_llama3(
+            instruction,
+            input_text,
+            max_tokens=128,
+            model_version=kwargs.get('model_version', 'final')
         )
+        print(f"[로그 6] 런포드 응답 수신 완료: {time.time() - start_all:.4f}s")  #
+        report_data = {
+            "title": f"{meta.district} 지역아동센터 수요 분석",
+            "summary": "분석 완료",
+            "content": raw_response
+        }
 
-        # 가독성을 위해 토큰 길이를 800으로 유지
-        return self._call_llama3(instruction, input_text, max_tokens=800)
+        # 파싱 로직 개선: split("-") 대신 다음 항목 키워드로 자르기
+        if "- 요약:" in raw_response:
+            try:
+                summary_part = raw_response.split("- 요약:")[1]
+                # '가능 요인' 항목 전까지만 가져옵니다.
+                report_data["summary"] = summary_part.split("- 가능 요인:")[0].strip()
+            except:
+                pass
+        return json.dumps(report_data, ensure_ascii=False)
+
+    def generate_policy(self, user_prompt: str, **kwargs) -> str:
+        instruction = (
+            "반드시 한국어로 답해라.\n"
+            "정책 아이디어 3가지를 한 줄씩만 제시해라. 추가 설명 금지.\n"
+            "형식:\n"
+            "1) ...\n"
+            "2) ...\n"
+            "3) ...\n"
+        )
+        # 정책 제안도 RAG 없이 바로 런포드 호출
+        return self._call_llama3(
+            instruction,
+            user_prompt,
+            max_tokens=96,
+            model_version=kwargs.get('model_version', 'final')
+        )
 
     def answer_qa_with_log(self, question: str, **kwargs) -> str:
-        answer = self.answer_qa(question, **kwargs)
-        self._save_chat_log(user_id=kwargs.get('user_id'), page=kwargs.get('page'), task_type="qa", question=question, answer=answer)
-        return answer
+        # Q&A에서만 rag_service가 호출되어 모델을 로드합니다.
+        pdf_context = self.rag_service.get_relevant_context(question)
+        instruction = "제공된 자료를 바탕으로 한국어로 답변하세요."
+        return self._call_llama3(instruction, f"참조:\n{pdf_context}\n질문: {question}",
+                                 model_version=kwargs.get('model_version', 'final'))
+
+    def _extract_query_meta(self, text: str) -> QueryMeta:
+        meta = QueryMeta()
+        districts = [
+            "종로구", "중구", "용산구", "성동구", "광진구", "동대문구", "중랑구", "성북구", "강북구", "도봉구",
+            "노원구", "은평구", "서대문구", "마포구", "양천구", "강서구", "구로구", "금천구", "영등포구", "동작구",
+            "관악구", "서초구", "강남구", "송파구", "강동구",
+        ]
+        for gu in districts:
+            if gu in text:
+                meta.district = gu
+                break
+        return meta
 
     def _build_forecast_context(self, meta: QueryMeta) -> str:
-        district = (meta.district or "").strip()
-        if not district or district == "전체": return ""
-        rows = RegionForecast.query.filter(RegionForecast.district == district, RegionForecast.year >= meta.start_year, RegionForecast.year <= meta.end_year).order_by(RegionForecast.year.asc()).all()
-        if not rows: return ""
-        first, last = rows[0], rows[-1]
-        feature_summaries = [
-            f"예측 이용자 수: {self._format_change(first.predicted_child_user, last.predicted_child_user)}",
-            f"한부모 가구: {self._format_change(first.single_parent, last.single_parent)}",
-            f"기초생활수급: {self._format_change(first.basic_beneficiaries, last.basic_beneficiaries)}",
-            f"다문화 가구: {self._format_change(first.multicultural_hh, last.multicultural_hh)}",
-            f"학원 수: {self._format_change(first.academy_cnt, last.academy_cnt)}",
-            f"1인당 GRDP: {self._format_change(first.grdp, last.grdp)}"
-        ]
-        return "\n".join(["[데이터 요약]", f"자치구: {district}, 기간: {meta.start_year}~{meta.end_year}", "주요 지표 변화:", *[f"- {fs}" for fs in feature_summaries]])
+        if meta.district == "전체":
+            summary = db.session.query(
+                RegionForecast.year,
+                func.sum(RegionForecast.predicted_child_user).label('total')
+            ).filter(
+                RegionForecast.year >= (meta.start_year or 2023),
+                RegionForecast.year <= (meta.end_year or 2030)
+            ).group_by(RegionForecast.year).all()
+            return "\n".join([f"{s.year}년 합계: {s.total}명" for s in summary]) if summary else "데이터 없음"
+        else:
+            rows = RegionForecast.query.filter(
+                RegionForecast.district == meta.district,
+                RegionForecast.year >= (meta.start_year or 2023),
+                RegionForecast.year <= (meta.end_year or 2030)
+            ).all()
+            return "\n".join([f"{r.year}년: {r.predicted_child_user}명" for r in rows]) if rows else "데이터 없음"
+
+    def update_settings(self, settings: dict):
+        self.default_settings.update(settings)
+
+
+# 싱글톤 인스턴스
+_genai_service_instance = None
+
+
+def get_genai_service():
+    global _genai_service_instance
+    if _genai_service_instance is None:
+        _genai_service_instance = GenAIService()
+    return _genai_service_instance
