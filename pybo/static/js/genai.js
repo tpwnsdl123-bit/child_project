@@ -219,4 +219,43 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch (err) { alert("서버 통신 오류"); }
         });
     }
+
+    // 텍스트 요약 서비스 연결
+    const summaryBtn = document.getElementById("summary-btn");
+    if (summaryBtn) {
+        summaryBtn.addEventListener("click", async function () {
+            const input = document.getElementById("summary-input");
+            const resultArea = document.getElementById("summaryResultArea");
+            const resultText = document.getElementById("summaryText");
+
+            if (!input.value.trim()) {
+                alert("요약할 내용을 입력해주세요.");
+                return;
+            }
+
+            summaryBtn.disabled = true;
+            summaryBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 요약 중...';
+            resultArea.style.display = "block";
+            resultText.textContent = "문서를 분석하여 요약 중입니다. 잠시만 기다려 주세요...";
+
+            try {
+                const resp = await fetch("/genai-api/summarize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: input.value }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    resultText.textContent = data.result;
+                } else {
+                    resultText.textContent = "오류: " + data.error;
+                }
+            } catch (err) {
+                resultText.textContent = "서버 통신 오류가 발생했습니다.";
+            } finally {
+                summaryBtn.disabled = false;
+                summaryBtn.innerHTML = '<i class="bi bi-scissors mr-2"></i> 핵심 요약하기';
+            }
+        });
+    }
 });

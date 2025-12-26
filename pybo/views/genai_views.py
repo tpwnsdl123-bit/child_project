@@ -104,3 +104,19 @@ def config():
 
     except ValueError:
         return jsonify({"success": False, "error": "잘못된 숫자 형식입니다."}), 400
+
+# 텍스트 요약
+@bp.route("/summarize", methods=["POST"])
+def summarize():
+    data = request.get_json() or {}
+    text = (data.get("text") or "").strip()
+
+    if not text:
+        return jsonify({"success": False, "error": "요약할 본문을 입력해 주세요."}), 400
+
+    try:
+        summary = genai_service.summarize_text(text)
+        return jsonify({"success": True, "result": summary})
+    except Exception as e:
+        current_app.logger.error(f"summarize error: {e}")
+        return jsonify({"success": False, "error": "요약 생성 중 오류가 발생했습니다."}), 500

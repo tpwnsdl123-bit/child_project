@@ -1,7 +1,8 @@
 import requests
 import json
 import os
-import time  # 시간 측정을 위해 추가
+import time
+from transformers import pipeline
 from dotenv import load_dotenv
 from dataclasses import dataclass
 from typing import Optional
@@ -26,13 +27,14 @@ class GenAIService:
         # 세션을 미리 생성하여 연결 속도를 높입니다.
         self.session = requests.Session()
         self.default_settings = {"temperature": 0.1, "max_tokens": 300}
+        self._summarizer = None
 
     @property
     def rag_service(self):
-        """Q&A가 필요할 때만 RAG 서비스를 로드합니다 (Lazy Loading)."""
+        # RAG가 필요할때만 로드
         if self._rag_service is None:
             from pybo.service.rag_service import RagService
-            print("--- 무거운 임베딩 모델 로딩 중... ---")
+            print("무거운 임베딩 모델 로딩 중...")
             self._rag_service = RagService()
         return self._rag_service
 
@@ -66,11 +68,9 @@ class GenAIService:
         meta.start_year = kwargs.get('start_year', 2023)
         print(f"[로그 2] 메타데이터 추출 완료: {time.time() - start_all:.4f}s")  #
 
-        # --- 여기서 시간이 걸리는지 확인 ---
         print(f"[로그 3] DB 조회 시작...")  #
         sql_context = self._build_forecast_context(meta)
         print(f"[로그 4] DB 조회 및 가공 완료: {time.time() - start_all:.4f}s")  #
-        # -----------------------------
 
         instruction = (
             "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답해.\n"
@@ -83,7 +83,6 @@ class GenAIService:
 
         print(f"[로그 5] 런포드 요청 직전: {time.time() - start_all:.4f}s")  #
 
-        # 여기서 런포드 터미널 로그와 대조해봐야 합니다.
         raw_response = self._call_llama3(
             instruction,
             input_text,
@@ -97,7 +96,7 @@ class GenAIService:
             "content": raw_response
         }
 
-        # 파싱 로직 개선: split("-") 대신 다음 항목 키워드로 자르기
+        # split("-") 대신 다음 항목 키워드로 자르기
         if "- 요약:" in raw_response:
             try:
                 summary_part = raw_response.split("- 요약:")[1]
@@ -164,7 +163,20 @@ class GenAIService:
 
     def update_settings(self, settings: dict):
         self.default_settings.update(settings)
+    
+    # 텍스트 요약
+    def summarize_text(self, text: str) -> str:
+        # 요약 모델 지연 로딩
+        if self._summarizer is None:
+            print("경량 요약 모델(KoBART) 로딩 중...")
+            self._summarizer = pipeline("summarization", model="digit82/kobart-summarization")
 
+        try:
+            # 요약 수행 (최대 길이는 150자로 제한)
+            result = self._summarizer(text, max_length=150, min_length=10, do_sample=False)
+            return result[0]['summary_text']
+        except Exception as e:
+            return f"요약 중 오류가 발생했습니다: {e}"
 
 # 싱글톤 인스턴스
 _genai_service_instance = None
