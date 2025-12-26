@@ -258,4 +258,34 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+
+    // 탭 전환 시 모델 선택창 제어
+    const modelSelector = document.querySelector('.model-compare-selector');
+    const navLinks = document.querySelectorAll('#genaiTab .nav-link');
+
+    // UI 상태를 업데이트하는 통합 함수
+    function updateUIByTab(tabId) {
+        if (!modelSelector) return;
+
+        if (tabId === 'summary-tab') {
+            // 텍스트 요약 탭일 경우 상단 바 물리적 제거
+            modelSelector.style.display = 'none';
+        } else {
+            // 그 외의 탭일 경우 다시 표시
+            modelSelector.style.display = 'block';
+        }
+    }
+
+    // 초기 실행: 페이지 로드 시 현재 활성화된 탭 확인 (새로고침 대응)
+    const currentActiveTab = document.querySelector('#genaiTab .nav-link.active');
+    if (currentActiveTab) {
+        updateUIByTab(currentActiveTab.id);
+    }
+
+    // 클릭 이벤트 리스너: 사용자가 메뉴를 클릭할 때마다 즉시 반영
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            updateUIByTab(this.id);
+        });
+    });
 });
