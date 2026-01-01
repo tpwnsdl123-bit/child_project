@@ -1,0 +1,29 @@
+digraph "packages_MyProjectName" {
+rankdir=BT
+charset="utf-8"
+"pybo" [color="black", label=<pybo>, shape="box", style="solid"];
+"pybo.forms" [color="black", label=<pybo.forms>, shape="box", style="solid"];
+"pybo.models" [color="black", label=<pybo.models>, shape="box", style="solid"];
+"pybo.service" [color="black", label=<pybo.service>, shape="box", style="solid"];
+"pybo.service.auth_service" [color="black", label=<pybo.service.auth_service>, shape="box", style="solid"];
+"pybo.service.data_service" [color="black", label=<pybo.service.data_service>, shape="box", style="solid"];
+"pybo.service.genai_service" [color="black", label=<pybo.service.genai_service>, shape="box", style="solid"];
+"pybo.service.qna_service" [color="black", label=<pybo.service.qna_service>, shape="box", style="solid"];
+"pybo.service.question_repository" [color="black", label=<pybo.service.question_repository>, shape="box", style="solid"];
+"pybo.service.rag_service" [color="black", label=<pybo.service.rag_service>, shape="box", style="solid"];
+"pybo.service.region_repository" [color="black", label=<pybo.service.region_repository>, shape="box", style="solid"];
+"pybo.service.user_repository" [color="black", label=<pybo.service.user_repository>, shape="box", style="solid"];
+"pybo.models" -> "pybo" [arrowhead="open", arrowtail="none"];
+"pybo.service.auth_service" -> "pybo.models" [arrowhead="open", arrowtail="none"];
+"pybo.service.auth_service" -> "pybo.service.user_repository" [arrowhead="open", arrowtail="none"];
+"pybo.service.data_service" -> "pybo.service.region_repository" [arrowhead="open", arrowtail="none"];
+"pybo.service.genai_service" -> "pybo" [arrowhead="open", arrowtail="none"];
+"pybo.service.genai_service" -> "pybo.models" [arrowhead="open", arrowtail="none"];
+"pybo.service.genai_service" -> "pybo.service.rag_service" [arrowhead="open", arrowtail="none"];
+"pybo.service.qna_service" -> "pybo.service.question_repository" [arrowhead="open", arrowtail="none"];
+"pybo.service.question_repository" -> "pybo" [arrowhead="open", arrowtail="none"];
+"pybo.service.question_repository" -> "pybo.models" [arrowhead="open", arrowtail="none"];
+"pybo.service.region_repository" -> "pybo.models" [arrowhead="open", arrowtail="none"];
+"pybo.service.user_repository" -> "pybo" [arrowhead="open", arrowtail="none"];
+"pybo.service.user_repository" -> "pybo.models" [arrowhead="open", arrowtail="none"];
+}

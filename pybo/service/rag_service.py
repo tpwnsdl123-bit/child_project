@@ -100,7 +100,7 @@ class RagService:
             search_kwargs=search_kwargs
         )
 
-        # 랭체인 최신 표준인 invoke 메서드 사용
+        # 랭체인 invoke 메서드 사용
         docs = retriever.invoke(question)
 
         lines = []
