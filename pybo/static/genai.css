@@ -331,6 +331,28 @@ input[value="final"]:checked + label {
     justify-content: center;
 }
 
+/* 점 세 개가 튕기는 애니메이션 효과 */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+}
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: #999;
+    border-radius: 50%;
+    animation: typing-bounce 1.4s infinite ease-in-out both;
+}
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing-bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+
 
 /* 모바일 반응형 최적화 (768px 이하) */
 @media (max-width: 768px) {

@@ -174,14 +174,36 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const qaBtn = document.getElementById("qa-btn");
-    if (qaBtn) {
+    const qaInput = document.getElementById("qa-input"); // 입력창 변수 추가
+
+    if (qaBtn && qaInput) {
+        // 엔터키 전송 및 Shift+Enter 줄바꿈 로직 추가
+        qaInput.addEventListener("keydown", function (e) {
+            // 엔터키만 눌렀을 때 실행
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault(); // 줄바꿈 방지
+                qaBtn.click(); // 전송 버튼 클릭 트리거
+            }
+        });
+
         qaBtn.addEventListener("click", async function () {
-            const input = document.getElementById("qa-input");
             const chat = document.getElementById("qa-chat-window");
-            if (!input.value.trim()) return;
-            const q = input.value;
+            if (!qaInput.value.trim()) return;
+
+            const q = qaInput.value;
             chat.innerHTML += `<div class="chat-bubble user-bubble">${q}</div>`;
-            input.value = "";
+            qaInput.value = "";
+
+            // 답변 대기 중임을 알리는 로딩 버블 생성
+            const tempLoadingId = "ai-loading-" + Date.now();
+            chat.innerHTML += `
+                <div class="chat-bubble ai-bubble" id="${tempLoadingId}">
+                    <div class="typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>`;
+            chat.scrollTop = chat.scrollHeight;
+
             try {
                 const resp = await fetch("/genai-api/qa", {
                     method: "POST",
@@ -189,9 +211,21 @@ document.addEventListener("DOMContentLoaded", function () {
                     body: JSON.stringify({ question: q, model_version: getModelVer() }),
                 });
                 const data = await resp.json();
-                chat.innerHTML += `<div class="chat-bubble ai-bubble">${data.success ? data.result : "오류"}</div>`;
+
+                // 생성된 로딩 버블을 찾아 실제 답변으로 교체
+                const loadingBubble = document.getElementById(tempLoadingId);
+                if (loadingBubble) {
+                    loadingBubble.innerHTML = data.success ? data.result : "답변을 가져오는 중 오류가 발생했습니다.";
+                }
+            } catch (err) {
+                const loadingBubble = document.getElementById(tempLoadingId);
+                if (loadingBubble) {
+                    loadingBubble.innerHTML = "서버 통신 오류가 발생했습니다.";
+                }
+                console.error(err);
+            } finally {
                 chat.scrollTop = chat.scrollHeight;
-            } catch (err) { console.error(err); }
+            }
         });
     }
 

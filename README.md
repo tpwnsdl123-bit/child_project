@@ -1,187 +1,146 @@
 # Agentic AI를 활용한 지역아동센터 수요 예측 서비스
 
-서울시 **자치구별 사회·인구·복지 지표**를 기반으로  
-**XGBoost 회귀 모델**로 지역아동센터 이용자 수(2015~2030)를 예측하고,  
-예측 결과를 **Flask + Oracle DB + 웹 UI**로 제공하는 서비스입니다.
+서울시 **자치구별 사회·인구·복지 지표**를 기반으로 **XGBoost 회귀 모델**로 지역아동센터 이용자 수를 예측하고, **LLM(Llama3) 및 RAG 기술**을 도입하여 정책 제안, 분석 보고서 생성, 법령 Q&A를 제공하는 지능형 웹 서비스입니다.
 
-> 현재 저장소는 **1차 프로젝트 결과물**로,  
-> 데이터 전처리 → 모델 학습 → DB 적재 → 대시보드/예측 UI 연동까지 완료된 상태입니다.  
-> 2차 프로젝트에서 Agentic AI / LLM 기반 지원 기능을 추가할 예정입니다.
+> **주요 업데이트**: 
+> - 기존 예측 모델에 **Generative AI** 기능을 통합하여 단순 통계를 넘어선 **인사이트**를 제공합니다.
+> - **MSA 지향적 구조** (Service 레이어 분리) 및 **Docker** 배포 환경을 지원합니다.
 
 ---
 
 ## 1. 프로젝트 구조
 
 ```text
-flask_basic/
+flask_basic_oop/
  ├── data/
- │    ├── master_2015_2022.csv                # 실제 관측 데이터 (2015~2022)
- │    └── predicted_child_user_2023_2030.csv  # XGBoost 예측값 (2023~2030)
+ │    ├── master_2015_2022.csv                # 학습용 관측 데이터
+ │    ├── predicted_child_user_2023_2030.csv  # 예측 결과 데이터
+ │    └── chroma_db/                          # RAG용 벡터 데이터베이스 (ChromaDB)
  │
  ├── pybo/
- │    ├── ml/
- │    │    ├── model_xgb.pkl        # 학습 완료된 XGBoost 모델
- │    │    ├── predictor.py         # /predict API에서 사용하는 예측 함수
- │    │    └── future_predict.py    # 2023~2030 예측 CSV 생성 스크립트
+ │    ├── ml/                                 # 머신러닝 관련 (예측 모델)
+ │    │    ├── model_xgb.pkl                  # 학습된 XGBoost 모델
+ │    │    └── predictor.py
  │    │
- │    ├── static/
- │    │    ├── style.css            # 전체 공통 스타일
- │    │    ├── bootstrap-icons.css  # 아이콘 폰트 스타일
- │    │    ├── fonts/
- │    │    │    ├── bootstrap-icons.woff
- │    │    │    └── bootstrap-icons.woff2
- │    │    └── images/
- │    │         └── Seoul_districts.svg   # 자치구별 SVG 지도
+ │    ├── service/                            # 비즈니스 로직 (Service Layer)
+ │    │    ├── genai_service.py               # Llama3 연동 및 프롬프트 엔지니어링
+ │    │    ├── rag_service.py                 # RAG (검색 증강 생성) 로직
+ │    │    └── data_service.py                # 통계/예측 데이터 처리
  │    │
- │    ├── templates/
- │    │    ├── base.html             # 공통 레이아웃(헤더/푸터/네비게이션)
- │    │    ├── main/
- │    │    │    ├── introduce.html   # 프로젝트 소개 페이지
- │    │    │    ├── dashboard.html   # 통계 대시보드(연도/자치구별 지표 시각화)
- │    │    │    └── predict.html     # 예측 결과 + 서울 지도 시각화
- │    │    ├── question/
- │    │    │    └── qna.html         # Q&A 게시판 화면
- │    │    └── partials/
- │    │         └── seoul_map.svg    # 템플릿에서 include하는 SVG 지도 파셜
+ │    ├── views/                              # API 엔드포인트 (Controller)
+ │    │    ├── main_views.py                  # 페이지 라우팅
+ │    │    ├── genai_views.py                 # 생성형 AI 관련 API (/genai-api)
+ │    │    └── predict_views.py               # 수요 예측 API
  │    │
- │    ├── views/
- │    │    ├── main_views.py         # 메인/소개/대시보드/예측 페이지 라우팅
- │    │    ├── predict_views.py      # POST /predict API 엔드포인트
- │    │    ├── data_views.py         # /data/* 통계/테스트용 API
- │    │    └── question_views.py     # Q&A 게시판 관련 라우팅
- │    │
- │    ├── models.py                  # SQLAlchemy 모델 정의
- │    ├── __init__.py                # create_app() Flask App Factory
- │    └── ...
+ │    ├── templates/                          # Jinja2 HTML 템플릿
+ │    ├── static/                             # CSS, JS, Images
+ │    └── models.py                           # DB 모델 (User, RegionForecast 등)
  │
- ├── insert_region_data.py           # 2015~2022 데이터 Oracle DB 삽입
- ├── insert_future_region_data.py    # 2023~2030 예측 데이터 DB 삽입
- ├── train_model.py                  # 모델 학습 및 model_xgb.pkl 저장
- ├── check_db.py                     # DB 상태/레코드 수 점검용 유틸
- │
- ├── migrations/                     # Flask-Migrate(Alembic) 마이그레이션 파일
- │    └── README                     # (자동 생성) Single-database configuration for Flask.
- │
- ├── .flaskenv                       # Flask 환경 변수 설정 (FLASK_APP 등)
- ├── .gitignore                      # Git 제외 파일 설정
- ├── requirements.txt                # Python 패키지 의존성 리스트
- ├── config.py                       # Flask / SQLAlchemy / Oracle 설정
- └── README.md                       # (현재 문서)
+ ├── docker-compose.yml                       # Docker 배포 설정
+ ├── Dockerfile                               # Flask 앱 이미지 빌드 설정
+ ├── requirements.web.txt                     # 웹 서비스용 경량 의존성
+ ├── requirements.llm.txt                     # AI/RAG용 추가 의존성 (Torch, Transformers 등)
+ ├── config.py                                # 환경 설정
+ └── README.md                                # 프로젝트 문서
+```
 
-2. 개발환경 세팅
-2-1. 가상환경 생성
-# (Windows 기준)
-python -m venv venv
-venv\Scripts\activate
+---
 
-2-2. 패키지 설치
-pip install -r requirements.txt
+## 2. 주요 기능
 
-2-3. Oracle XE 준비
+### 2.1. 수요 예측 (Prediction)
+- **알고리즘**: XGBoost Regressor
+- **기능**: 2030년까지의 자치구별 지역아동센터 이용 아동 수 예측
+- **활용**: 인프라 확충이 시급한 지역 식별
 
-서비스명: xe
+### 2.2. 지능형 분석 보고서 (AI Report)
+- **모델**: Llama3 (RunPod Serverless Endpoint 연동)
+- **기능**: 특정 자치구의 예측 데이터를 분석하여 "요약 - 원인 분석 - 추가 필요 데이터" 형태의 구조화된 보고서 자동 생성
 
-유저: child
+### 2.3. 정책 제안 (Policy Idea)
+- **기능**: 지역별 통계 특성을 바탕으로 맞춤형 아동 복지 정책 아이디어 3가지 제안
+- **프롬프트**: 전문가 페르소나를 부여하여 구체적이고 실현 가능한 정책 도출
 
-비밀번호: child1234
+### 2.4. 법령/지침 Q&A (RAG Chatbot)
+- **기술**: RAG (Retrieval-Augmented Generation)
+- **데이터**: 서울시 아동복지 관련 법령 및 지침 문서 (PDF/Txt -> ChromaDB 임베딩)
+- **기능**: 사용자의 질문에 대해 관련 법령을 검색(Retrieval)하여 근거 기반의 정확한 답변 생성
 
-config.py / .flaskenv 에서 SQLALCHEMY_DATABASE_URI가 다음과 같이 설정되어야 합니다.
+### 2.5. 텍스트 요약 (Summarization)
+- **모델**: KoBART (Local Model)
+- **기능**: 긴 정책 문서나 게시글 내용을 3줄 요약
 
-oracle+cx_oracle://child:child1234@localhost:1521/xe
+---
 
-3. 데이터 & DB 초기 세팅
-3-1. 실제 데이터 삽입 (2015~2022)
-python insert_region_data.py
+## 3. 개발 및 배포 환경 설정
 
-3-2. 미래 예측 CSV 생성 (2023~2030)
-python pybo/ml/future_predict.py
+### 방법 A. Docker Compose (권장)
+복잡한 환경 설정(Oracle DB, Python 패키지 등)을 한 번에 해결할 수 있습니다.
 
+1. **Docker 실행**
+   ```bash
+   docker-compose up -d --build
+   ```
+   - Oracle XE 11g 데이터베이스와 Flask 애플리케이션 컨테이너가 실행됩니다.
+   - DB 데이터는 `./oracle_data` 폴더에 영구 저장됩니다.
 
-master_2015_2022.csv를 기반으로 XGBoost 모델을 사용하여
-predicted_child_user_2023_2030.csv를 생성합니다.
+2. **접속**
+   - 웹 서비스: `http://localhost:5000`
+   - Oracle DB: `localhost:1521` (User: `child`, PW: `oracle` / 설정 참고)
 
-3-3. 미래 예측 데이터 DB 삽입
-python insert_future_region_data.py
+### 방법 B. 로컬 개발 환경 (Manual)
 
+1. **가상환경 생성 및 활성화**
+   ```bash
+   python -m venv venv
+   # Windows
+   venv\Scripts\activate
+   # Mac/Linux
+   source venv/bin/activate
+   ```
 
-CSV에 있는 2023~2030 자치구별 예측값을 Oracle DB에 적재합니다.
+2. **패키지 설치**
+   가벼운 웹 개발만 할 경우 `web`, AI 기능까지 개발할 경우 `llm`을 설치합니다.
+   ```bash
+   # 기본 웹 구동
+   pip install -r requirements.web.txt
+   
+   # AI/RAG 기능 포함 (PyTorch 등 포함되어 설치 오래 걸림)
+   pip install -r requirements.llm.txt
+   ```
 
-이후 웹 대시보드/예측 페이지는 DB에서 직접 조회해서 사용합니다.
+3. **환경 변수 설정 (.env)**
+   프로젝트 루트에 `.env` 파일을 생성하고 키를 설정해야 AI 기능이 작동합니다.
+   ```ini
+   FLASK_APP=pybo
+   FLASK_DEBUG=1
+   RUNPOD_API_URL=https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync
+   # 기타 DB 설정 등
+   ```
 
-4. 모델 재학습 (선택)
+4. **실행**
+   ```bash
+   flask run
+   ```
 
-새로운 데이터나 피처를 추가한 뒤 모델을 다시 학습하려면:
+---
 
-python train_model.py
+## 4. API 명세 (GenAI)
 
+AI 기능은 `/genai-api` 접두사를 가집니다.
 
-학습 완료 후 모델은 자동으로 pybo/ml/model_xgb.pkl로 저장됩니다.
+| 기능 | Method | 엔드포인트 | 중요 파라미터 |
+|------|--------|------------|---------------|
+| **분석 보고서** | POST | `/genai-api/report` | `district` (자치구명), `start_year`, `end_year` |
+| **정책 제안** | POST | `/genai-api/policy` | `district` (자치구명), `prompt` (추가요청) |
+| **AI Q&A** | POST | `/genai-api/qa` | `question` (사용자 질문) |
+| **텍스트 요약** | POST | `/genai-api/summarize` | `text` (원문) |
+| **모델 설정** | POST | `/genai-api/config` | `temperature`, `max_tokens` |
 
-predictor.py에서 이 파일을 로드하여 /predict API에서 사용합니다.
+---
 
-5. Flask 서버 실행
-
-.flaskenv 덕분에 FLASK_APP 등은 자동 설정됩니다.
-
-flask run
-
-주요 URL
-
-메인 페이지 / 소개 / 대시보드 / 예측
-
-http://127.0.0.1:5000/
-
-테스트용 데이터 API
-
-http://127.0.0.1:5000/data/test
-
-예측 API
-
-POST http://127.0.0.1:5000/predict
-
-6. 예측 API 명세 (Frontend 용)
-✔ 엔드포인트
-POST /predict
-Content-Type: application/json
-
-요청(JSON)
-{
-  "single_parent": 1500,
-  "basic_beneficiaries": 8000,
-  "multicultural_hh": 2000,
-  "academy_cnt": 120.5,
-  "grdp": 18000000
-}
-
-
-각 필드는 다음을 의미합니다.
-
-single_parent : 자치구별 한부모 가구 수
-
-basic_beneficiaries : 기초생활수급자 수
-
-multicultural_hh : 다문화 가구 수
-
-academy_cnt : 사설 학원 수
-
-grdp : 지역 총소득(또는 1인당 GRDP 기반 지표)
-
-응답(JSON)
-{
-  "success": true,
-  "prediction": 1234.56
-}
-
-
-prediction : 입력 피처를 기반으로 예측된 지역아동센터 이용자 수
-
-7. 유틸 스크립트
-데이터베이스 상태 점검
-python check_db.py
-
-
-DB 연결 상태, 주요 테이블 레코드 수 등을 확인하는 용도입니다.
-
-8. 향후 계획 (2차 프로젝트)
-
-Agentic AI / LLM 연동
+## 5. 향후 계획
+- [ ] LLM 모델 답변 고도화
+- [ ] Llama3 파인튜닝
+- [ ] RAG 품질 개선
+- [ ] 머신러닝 변수 데이터 추가 예측 결과 품질 향상 

@@ -26,7 +26,7 @@ class GenAIService:
         self._rag_service = None
         # 세션을 미리 생성하여 연결 속도를 높입니다.
         self.session = requests.Session()
-        self.default_settings = {"temperature": 0.1, "max_tokens": 300}
+        self.default_settings = {"temperature": 0.3, "max_tokens": 512}
         self._summarizer = None
 
     @property
@@ -86,7 +86,7 @@ class GenAIService:
         raw_response = self._call_llama3(
             instruction,
             input_text,
-            max_tokens=128,
+            max_tokens=512,
             model_version=kwargs.get('model_version', 'final')
         )
         print(f"[로그 6] 런포드 응답 수신 완료: {time.time() - start_all:.4f}s")  #
@@ -107,28 +107,61 @@ class GenAIService:
         return json.dumps(report_data, ensure_ascii=False)
 
     def generate_policy(self, user_prompt: str, **kwargs) -> str:
+        # 질문에서 지역 및 연도 정보 추출
+        meta = self._extract_query_meta(user_prompt)
+        meta.district = kwargs.get('district', meta.district)
+        
+        # SQL DB에서 해당 지역의 예측 수치 조회
+        sql_context = self._build_forecast_context(meta)
+        
         instruction = (
-            "반드시 한국어로 답해라.\n"
-            "정책 아이디어 3가지를 한 줄씩만 제시해라. 추가 설명 금지.\n"
+            "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답해라.\n"
+            "제공된 지역별 수요 예측 데이터를 바탕으로 정책 아이디어 3가지를 한 줄씩만 제시해라. 추가 설명 금지.\n"
             "형식:\n"
             "1) ...\n"
             "2) ...\n"
             "3) ...\n"
         )
-        # 정책 제안도 RAG 없이 바로 런포드 호출
+        
+        # 사용자 질문과 DB 데이터를 함께 입력값으로 구성
+        input_text = f"지역: {meta.district}\n예측 데이터:\n{sql_context}\n\n사용자 요청: {user_prompt}"
+        
         return self._call_llama3(
-            instruction,
-            user_prompt,
-            max_tokens=96,
+            instruction, 
+            input_text, 
+            max_tokens=256, 
             model_version=kwargs.get('model_version', 'final')
         )
 
     def answer_qa_with_log(self, question: str, **kwargs) -> str:
-        # Q&A에서만 rag_service가 호출되어 모델을 로드합니다.
+        # 간단한 인사말인지 확인
+        greetings = ["안녕", "반가워", "하이", "hello", "hi", "누구"]
+        is_greeting = any(greet in question.lower() for greet in greetings) and len(question.strip()) < 10
+
+        if is_greeting:
+            # 인사말인 경우 RAG와 DB 조회를 건너뛰고 바로 응답
+            instruction = "너는 서울시 아동복지 정책 전문가이자 친절한 상담사야. 사용자의 인사에 반갑게 화답하고 무엇을 도와줄지 짧고 친절하게 물어봐."
+            return self._call_llama3(instruction, f"사용자 질문: {question}", 
+                                     model_version=kwargs.get('model_version', 'final'))
+
+        # 일반 질문인 경우 기존 로직 수행 (RAG + DB)
         pdf_context = self.rag_service.get_relevant_context(question)
-        instruction = "제공된 자료를 바탕으로 한국어로 답변하세요."
-        return self._call_llama3(instruction, f"참조:\n{pdf_context}\n질문: {question}",
-                                 model_version=kwargs.get('model_version', 'final'))
+        meta = self._extract_query_meta(question)
+        sql_context = self._build_forecast_context(meta) if meta.district != "전체" else ""
+
+        combined_context = f"법령 및 지침 자료:\n{pdf_context}\n\n실제 통계 데이터:\n{sql_context}"
+        
+        instruction = (
+            "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답변해라. "
+            "제공된 자료에 근거하여 답변하되, 질문과 직접적인 관련이 없는 법령은 생략하고 "
+            "상담사처럼 친절한 말투(~해요, ~입니다)를 사용해라."
+        )
+
+        return self._call_llama3(
+            instruction, 
+            f"참조 자료:\n{combined_context}\n질문: {question}",
+            model_version=kwargs.get('model_version', 'final')
+        )
 
     def _extract_query_meta(self, text: str) -> QueryMeta:
         meta = QueryMeta()
@@ -172,8 +205,8 @@ class GenAIService:
             self._summarizer = pipeline("summarization", model="digit82/kobart-summarization")
 
         try:
-            # 요약 수행 (최대 길이는 150자로 제한)
-            result = self._summarizer(text, max_length=150, min_length=10, do_sample=False)
+            # 요약 수행 (최대 길이는 300자로 제한)
+            result = self._summarizer(text, max_length=300, min_length=10, do_sample=False)
             return result[0]['summary_text']
         except Exception as e:
             return f"요약 중 오류가 발생했습니다: {e}"
