@@ -5,6 +5,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 
+
 class RagService:
     def __init__(self):
         self.persist_directory = "data/chroma_db"
@@ -12,7 +13,7 @@ class RagService:
 
         self.embeddings = HuggingFaceEmbeddings(
             model_name="jhgan/ko-sroberta-multitask",
-            model_kwargs={'device': 'cpu'}
+            model_kwargs={"device": "cpu"}
         )
 
         self.vector_db = self._prepare_vector_db()
@@ -32,7 +33,7 @@ class RagService:
                     continue
 
                 data = json.loads(line)
-                doc_name = data.get('doc', '')
+                doc_name = data.get("doc", "")
 
                 doc_type = "etc"
                 if "복지법" in doc_name:
@@ -60,17 +61,23 @@ class RagService:
                 )
                 documents.append(doc)
 
-        # 문서가 하나도 없을 경우 에러 방지 처리
         if not documents:
             return None
 
-        return Chroma.from_documents(
+        vectordb = Chroma.from_documents(
             documents=documents,
             embedding=self.embeddings,
             persist_directory=self.persist_directory
         )
 
-    # 인스턴스 변수를 사용하지 않으므로 정적 메서드로 전환하여 린터 경고 해결
+        # persist가 보장되지 않는 환경 대비
+        try:
+            vectordb.persist()
+        except Exception:
+            pass
+
+        return vectordb
+
     @staticmethod
     def _route_doc_type(question: str) -> Optional[str]:
         q = (question or "").lower()
@@ -88,20 +95,19 @@ class RagService:
 
         doc_type = self._route_doc_type(question)
 
-        # MMR 대신 속도가 빠른 similarity 검색 사용
-        search_kwargs: Dict[str, Any] = {"k": 3}  # 검색 결과 개수를 3개로 최적화
-
+        search_kwargs: Dict[str, Any] = {"k": 3}
         if doc_type:
             search_kwargs["filter"] = {"doc_type": doc_type}
 
-        # search_type을 similarity로 변경하여 연산 속도 향상
         retriever = self.vector_db.as_retriever(
             search_type="similarity",
             search_kwargs=search_kwargs
         )
 
-        # 랭체인 invoke 메서드 사용
         docs = retriever.invoke(question)
+
+        if not docs:
+            return "관련 법령/지침 근거를 찾지 못했습니다."
 
         lines = []
         for d in docs:
