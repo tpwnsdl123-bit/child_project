@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, render_template, current_app, g
 import requests
+import traceback
 import os
+from pybo.agent.qa_graph import run_qa
 from pybo.service.genai_service import get_genai_service
 
 # Blueprint 설정 (URL 프리픽스 확인: /genai-api)
@@ -120,3 +122,24 @@ def summarize():
     except Exception as e:
         current_app.logger.error(f"summarize error: {e}")
         return jsonify({"success": False, "error": "요약 생성 중 오류가 발생했습니다."}), 500
+    
+@bp.route("/qa_v2", methods=["POST"])
+def qa_v2():
+    data = request.get_json() or {}
+    question = (data.get("question") or "").strip()
+
+    if not question:
+        return jsonify({"success": False, "error": "질문을 입력해 주세요."}), 400
+
+    try:
+        answer = run_qa(question)
+        return jsonify({"success": True, "result": answer})
+    except Exception:
+        # 콘솔에 전체 스택트레이스 출력
+        current_app.logger.exception("qa_v2 error")
+
+        # 응답에는 요약만
+        return jsonify({
+            "success": False,
+            "error": "qa_v2 error (check server log)"
+        }), 500

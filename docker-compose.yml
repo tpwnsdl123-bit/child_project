@@ -20,11 +20,29 @@ services:
       - "5000:5000"
     depends_on:
       - db
+      - mcp-server
     volumes:
       - .:/app
       - ./data/chroma_db:/app/data/chroma_db
     env_file:
       - .env
+    environment:
+      - MCP_URL=http://mcp-server:8000/mcp
+      - DB_URI=oracle+cx_oracle://child:child1234@db:1521/xe
     command: flask run --host=0.0.0.0
     stdin_open: true
     tty: true
+
+  mcp-server:
+    build: .
+    image: ksejun/my-flask-app:v1
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./data/chroma_db:/app/data/chroma_db
+    command: python mcp_servers/taike_tools_server.py

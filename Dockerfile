@@ -15,8 +15,8 @@ ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_21_1"
 
 # 내 프로젝트 파일들을 도커 안으로 복사
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.web.txt .
+RUN pip install --no-cache-dir -r requirements.web.txt
 COPY . .
 
 # Flask 실행

@@ -14,6 +14,10 @@ from sqlalchemy import func
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# 리팩토링된 에이전트 모듈 임포트
+from pybo.agent.tool_agent import ToolAgent
+from pybo.agent.prompts import QA_SYSTEM_PROMPT, REPORT_SYSTEM_PROMPT, POLICY_SYSTEM_PROMPT
+
 load_dotenv()
 
 
@@ -48,20 +52,19 @@ class GenAIService:
 
     @property
     def rag_service(self):
-        # RAG가 필요할때만 로드
+        # RAG가 필요할때만 로드 (기존 호환성 유지)
         if self._rag_service is None:
             from pybo.service.rag_service import RagService
             print("무거운 임베딩 모델 로딩 중...")
             self._rag_service = RagService()
         return self._rag_service
 
-    @staticmethod
-    def _truncate(text: str, max_chars: int = 4000) -> str:
-        if not text:
-            return ""
-        if len(text) <= max_chars:
-            return text
-        return text[:max_chars] + "\n...(생략됨)"
+    @property
+    def agent(self):
+        # 에이전트 엔진 초기화 (LLM 콜백 전달)
+        if not hasattr(self, "_agent_instance"):
+            self._agent_instance = ToolAgent(llm_callback=self._call_llama3)
+        return self._agent_instance
 
     @staticmethod
     def _ensure_meta_defaults(meta: QueryMeta, **kwargs) -> QueryMeta:
@@ -70,13 +73,6 @@ class GenAIService:
         meta.start_year = kwargs.get("start_year", meta.start_year or 2023)
         meta.end_year = kwargs.get("end_year", meta.end_year or 2030)
         return meta
-
-    @staticmethod
-    def _looks_like_report_3lines(text: str) -> bool:
-        if not text:
-            return False
-        # 3개 항목이 모두 존재
-        return ("- 요약:" in text) and ("- 가능 요인:" in text) and ("- 추가 데이터:" in text)
 
     # 런포드 호출
     def _call_llama3(
@@ -120,151 +116,68 @@ class GenAIService:
             print(f"[LLM UNKNOWN ERROR] {e}")
             return "AI 서버 처리 중 알 수 없는 오류가 발생했습니다."
 
-    # 보고서
+    # 보고서 (Agentic AI - 에이전트 엔진에게 위임)
     def generate_report_with_data(self, user_prompt: str, **kwargs) -> str:
-        start_all = time.time()
-        print(f"\n[로그 1] 함수 진입 완료: {time.time() - start_all:.4f}s")
-
-        meta = self._extract_query_meta(user_prompt)
-        meta = self._ensure_meta_defaults(meta, **kwargs)
-        print(f"[로그 2] 메타데이터 확정 완료: {time.time() - start_all:.4f}s")
-
-        print("[로그 3] DB 조회 시작...")
-        sql_context = self._build_forecast_context(meta)
-        sql_context = self._truncate(sql_context, max_chars=2500)
-        print(f"[로그 4] DB 조회 및 가공 완료: {time.time() - start_all:.4f}s")
-
-        instruction = (
-            "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답해.\n"
-            "아래 형식을 정확히 지켜. (딱 3줄만, 추가 문장/설명 금지)\n"
-            "- 요약: 한 문장\n"
-            "- 가능 요인: 한 문장\n"
-            "- 추가 데이터: 한 문장\n"
-            "※ 제공된 데이터 범위 밖은 추측하지 말고 '자료에 없음'이라고 말해."
+        district = kwargs.get("district", "전체")
+        start_year = kwargs.get("start_year", 2023)
+        end_year = kwargs.get("end_year", 2030)
+        
+        mission = (
+            f"[지시상황: {district} 지역아동센터 분석 보고서 작성 임무]\n"
+            f"1. db_forecast_search를 사용하여 {start_year}~{end_year}년 인구 데이터를 먼저 조회하라.\n"
+            f"2. 위 데이터 수치를 바탕으로 분석하여 create_report_task 도구로 보고서를 작성하라.\n"
+            "3. 인사말이나 진행 설명은 생략하고 오직 보고서의 최종 결과물만 'Final Answer:'로 제출하라."
         )
-        input_text = (
-            f"지역:{meta.district}\n"
-            f"기간:{meta.start_year}-{meta.end_year}\n"
-            f"데이터:\n{sql_context}\n\n"
-            f"사용자 요청:{user_prompt}"
-        )
-
-        print(f"[로그 5] 런포드 요청 직전: {time.time() - start_all:.4f}s")
-        raw_response = self._call_llama3(
-            instruction,
-            input_text,
-            max_new_tokens=kwargs.get("max_new_tokens", 512),
-            model_version=kwargs.get("model_version", "final"),
-        )
-        print(f"[로그 6] 런포드 응답 수신 완료: {time.time() - start_all:.4f}s")
-
-        # 형식이 깨지면 1회만 재시도(temperature=0으로 고정해서 안정화)
-        if not self._looks_like_report_3lines(raw_response):
-            retry_instruction = (
-                "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답해.\n"
-                "반드시 아래 3줄만 출력해. 다른 문장/머리말/끝맺음/공백 추가 금지.\n"
-                "- 요약: 한 문장\n"
-                "- 가능 요인: 한 문장\n"
-                "- 추가 데이터: 한 문장\n"
-                "※ 제공된 데이터 범위 밖은 추측하지 말고 '자료에 없음'이라고 말해."
-            )
-            raw_response = self._call_llama3(
-                retry_instruction,
-                input_text,
-                max_new_tokens=256,
-                model_version=kwargs.get("model_version", "final"),
-                temperature=0.0,
-            )
-
+        raw_response = self.agent.run(mission, instruction=REPORT_SYSTEM_PROMPT)
+        
         report_data = {
-            "title": f"{meta.district} 지역아동센터 수요 분석",
-            "summary": "분석 완료",
+            "title": f"{district} 아동복지 데이터 분석 보고서",
+            "summary": "AI 자율 분석 기반 보고서",
             "content": raw_response
         }
-
-        # "- 요약:" 기준으로 summary 추출 (형식 깨져도 최대한 안전하게)
-        if "- 요약:" in raw_response:
-            try:
-                summary_part = raw_response.split("- 요약:")[1]
-                report_data["summary"] = summary_part.split("- 가능 요인:")[0].strip()
-            except Exception:
-                pass
-
         return json.dumps(report_data, ensure_ascii=False)
 
-    # 정책 아이디어
+    # 정책 아이디어 (에이전트 위임)
     def generate_policy(self, user_prompt: str, **kwargs) -> str:
-        meta = self._extract_query_meta(user_prompt)
-        meta = self._ensure_meta_defaults(meta, **kwargs)
-
-        sql_context = self._build_forecast_context(meta)
-        sql_context = self._truncate(sql_context, max_chars=2000)
-
-        instruction = (
-            "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답해라.\n"
-            "제공된 지역별 수요 예측 데이터를 바탕으로 정책 아이디어 3가지를 한 줄씩만 제시해라. 추가 설명 금지.\n"
-            "자료 밖은 추측하지 말고 '자료에 없음'이라고 말해.\n"
-            "형식:\n"
-            "1) ...\n"
-            "2) ...\n"
-            "3) ...\n"
+        district = kwargs.get("district", "전체")
+        mission = (
+            f"[지시상황: {district} 지역 맞춤형 정책 제안 임무]\n"
+            "**반드시 아래 순서대로 실행하십시오:**\n"
+            "1단계: db_forecast_search를 호출하여 지역의 통계 트렌드를 먼저 확인하라.\n"
+            "2단계: 위 통계 결과를 바탕으로 create_policy_task를 호출하여 구체적인 정책 3가지를 생성하라.\n"
+            "**주의: 1단계 결과가 나오기 전에 2단계를 앞서서 진행하지 마십시오.**\n"
+            "최종 결과인 정책 본문만 'Final Answer:'로 제출하십시오."
         )
+        return self.agent.run(mission, instruction=POLICY_SYSTEM_PROMPT)
 
-        input_text = f"지역: {meta.district}\n기간:{meta.start_year}-{meta.end_year}\n예측 데이터:\n{sql_context}\n\n사용자 요청: {user_prompt}"
-
-        return self._call_llama3(
-            instruction,
-            input_text,
-            max_new_tokens=kwargs.get("max_new_tokens", 256),
-            model_version=kwargs.get("model_version", "final"),
-        )
-
-    # QA (RAG + DB)
+    # QA (에이전트 위임)
     def answer_qa_with_log(self, question: str, **kwargs) -> str:
+        # 단기 메모리 (history) 관리
+        if not hasattr(self, "_chat_history"):
+            self._chat_history = []
+            
+        # 인사말 처리 (인사말일 때도 히스토리엔 남김)
         greetings = ["안녕", "반가워", "하이", "hello", "hi", "누구"]
-        q_low = (question or "").lower()
-        is_greeting = any(greet in q_low for greet in greetings) and len((question or "").strip()) < 15
+        is_greet = any(greet in (question or "").lower() for greet in greetings) and len(question.strip()) < 15
+        
+        if is_greet:
+            # 인삿말도 에이전트의 안정적인 루프와 언어 제어를 따르도록 수정
+            answer = self.agent.run(question, instruction=QA_SYSTEM_PROMPT, history=self._chat_history)
+        else:
+            # 에이전트 실행 시 히스토리 및 QA 전용 프롬프트 전달
+            answer = self.agent.run(question, instruction=QA_SYSTEM_PROMPT, history=self._chat_history)
+        
+        # 히스토리에 추가 (추론 과정 제외, 오직 질문과 결과만 저장)
+        self._chat_history.append(f"Q: {question}")
+        self._chat_history.append(f"A: {answer}")
+        
+        # 히스토리 크기 제한 (최근 3턴 정도만 유지하여 할루시네이션 방지)
+        if len(self._chat_history) > 6:
+            self._chat_history = self._chat_history[-6:]
+            
+        return answer
 
-        if is_greeting:
-            instruction = (
-                "너는 서울시 아동복지 정책 전문가이자 친절한 상담사야. "
-                "사용자의 인사에 반갑게 화답하고 무엇을 도와줄지 짧고 친절하게 물어봐."
-            )
-            return self._call_llama3(
-                instruction,
-                f"사용자 질문: {question}",
-                model_version=kwargs.get("model_version", "final")
-            )
-
-        # RAG + DB
-        pdf_context = self.rag_service.get_relevant_context(question)
-        pdf_context = self._truncate(pdf_context, max_chars=3500)
-
-        meta = self._extract_query_meta(question)
-        meta = self._ensure_meta_defaults(meta, **kwargs)
-        sql_context = self._build_forecast_context(meta) if meta.district != "전체" else ""
-        sql_context = self._truncate(sql_context, max_chars=2000)
-
-        combined_context = (
-            f"법령 및 지침 자료:\n{pdf_context}\n\n"
-            f"실제 통계 데이터:\n{sql_context}"
-        )
-
-        instruction = (
-            "너는 서울시 아동복지 정책 전문가다. 반드시 한국어로 답변해라. "
-            "반드시 제공된 '참조 자료'에 근거해서만 답해라. "
-            "참조 자료에 없는 내용은 추측하지 말고 '자료에 없음'이라고 말해라. "
-            "질문과 직접 관련 없는 법령/지침은 생략해라. "
-            "상담사처럼 친절한 말투(~해요, ~입니다)를 사용해라."
-        )
-
-        return self._call_llama3(
-            instruction,
-            f"참조 자료:\n{combined_context}\n\n질문: {question}",
-            model_version=kwargs.get("model_version", "final")
-        )
-
-    # 메타 추출
+    # 메타 추출 (필요시 도구 내부에서 처리하거나 제거)
     def _extract_query_meta(self, text: str) -> QueryMeta:
         meta = QueryMeta()
         districts = [
@@ -277,58 +190,6 @@ class GenAIService:
                 meta.district = gu
                 break
         return meta
-
-    # DB 컨텍스트
-    def _build_forecast_context(self, meta: QueryMeta) -> str:
-        start_year = meta.start_year or 2023
-        end_year = meta.end_year or 2030
-
-        if meta.district == "전체":
-            summary = (
-                db.session.query(
-                    RegionForecast.year,
-                    func.sum(RegionForecast.predicted_child_user).label("total")
-                )
-                .filter(
-                    RegionForecast.year >= start_year,
-                    RegionForecast.year <= end_year
-                )
-                .group_by(RegionForecast.year)
-                .order_by(RegionForecast.year.asc())
-                .all()
-            )
-            return "\n".join([f"{s.year}년 합계: {s.total}명" for s in summary]) if summary else "데이터 없음"
-
-        rows = (
-            RegionForecast.query
-            .filter(
-                RegionForecast.district == meta.district,
-                RegionForecast.year >= start_year,
-                RegionForecast.year <= end_year
-            )
-            .order_by(RegionForecast.year.asc())
-            .all()
-        )
-        return "\n".join([f"{r.year}년: {r.predicted_child_user}명" for r in rows]) if rows else "데이터 없음"
-
-    def update_settings(self, settings: dict):
-        # max_tokens 키 혼동 방지: max_new_tokens로 통일
-        if "max_tokens" in settings and "max_new_tokens" not in settings:
-            settings["max_new_tokens"] = settings.pop("max_tokens")
-        self.default_settings.update(settings)
-
-    # 텍스트 요약
-    def summarize_text(self, text: str) -> str:
-        if self._summarizer is None:
-            print("경량 요약 모델(KoBART) 로딩 중...")
-            self._summarizer = pipeline("summarization", model="digit82/kobart-summarization")
-
-        try:
-            result = self._summarizer(text, max_length=300, min_length=10, do_sample=False)
-            return result[0]["summary_text"]
-        except Exception as e:
-            print(f"[SUMMARIZE ERROR] {e}")
-            return "요약 중 오류가 발생했습니다."
 
 
 # 싱글톤 인스턴스
